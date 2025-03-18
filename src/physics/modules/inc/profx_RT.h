@@ -519,7 +519,6 @@ __global__ void rtm_dual_band(double *pressure_d,
                    nv,
                    insol_d,
                    DeepModel,
-                   GravHeightVar,
                    GravHeightVar);
         }
         else {
