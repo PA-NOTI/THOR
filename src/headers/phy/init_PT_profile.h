@@ -174,15 +174,6 @@ void linear_interpolation_fit(int     len,
 
     linear_interp(x, x1, x2, y1, y2, Yout);
 
-    /*
-    printf("Xin = %e  \n", Xin);
-    printf("x = %e  \n", x);
-    printf("x1 = Xreference[%d] = %e  \n",lowiter, Xreference[lowiter]);
-    printf("x2 = Xreference[%d] = %e  \n",iter, Xreference[iter]);
-    printf("y1 = Yreference[%d] = %e  \n",lowiter, Yreference[lowiter]);
-    printf("y2 = Yreference[%d] = %e  \n",iter, Yreference[iter]);
-    printf("Yout = %e  \n", Yout);
-    */
 
     Yout = Yout;
 }
@@ -951,7 +942,10 @@ void Parmentier_IC_1D(const int nlay,
                       double    grav,
                       double*(&Tl),
                       int    table_num,
-                      double met) {
+                      double met,
+                      double Csurf,
+                      bool   surface,
+                      double P_Ref) {
     // dependcies
     //// pow -> math
     //// sqrt -> math
@@ -964,7 +958,7 @@ void Parmentier_IC_1D(const int nlay,
     //
 
     // work variables
-    int    i, j, k;
+    int    i, j, k, z;
     double Teff0, Teff, Tmu, Bond, Tskin;
     double gam_V[3] = {0}, Beta_V[3] = {0};
     double Beta[2];
@@ -977,17 +971,32 @@ void Parmentier_IC_1D(const int nlay,
 
 
     double summy;
+    double summy2;
+    
+    double tau_P_Ref;
+    double T_surf;
+    double summy_surf;
+    double surf_albedo;
+    double surf_flux;
+    const double StBC = 5.670374419e-8;
+    const double pi = atan(1.0) * 4;
 
     // start operations
 
     // Effective temperature parameter
     Tmu = pow((mu * pow(Tirr, 4.0)), (1.0 / 4.0));
+    
+    
 
     // Find Bond albedo of planet - Bond albedo is given by mu = 1/sqrt(3)
     Teff0 = pow((pow(Tint, 4.0) + (1.0 / sqrt(3.0)) * pow(Tirr, 4.0)), (1.0 / 4.0));
 
     Bond_Parmentier_host(Teff0, grav, Bond);
-
+    
+     
+    Tmu = (1.0 - Bond) * Tmu;
+        
+    
 
     Teff = pow((pow(Tint, 4.0) + (1.0 - Bond) * mu * pow(Tirr, 4.0)), (1.0 / 4.0));
 
@@ -1095,38 +1104,103 @@ void Parmentier_IC_1D(const int nlay,
         3.0 * pow(Tint, 4) / 4.0 * (tau[nlay - 1] + A + B * exp(-tau[nlay - 1] / tau_lim)) + summy;
 
     Tl[nlay - 1] = pow(Tl[nlay - 1], (1.0 / 4.0));
-
-    // Now we can loop in optical depth space to find the T-p profile
-    for (i = nlay - 2; i > -1; i--) {
-        // Initial guess for layer
-        k_Ross_Freedman(Tl[i + 1], sqrt(pl[i + 1] * pl[i]), met, kRoss[i]);
-
-        tau[i] = tau[i + 1] + kRoss[i] / grav * (pl[i] - pl[i + 1]);
-
-        summy = 0.0;
-        for (j = 0; j < 3; j++) {
-            summy += 3.0 * Beta_V[j] * pow(Tmu, 4.0) / 4.0
+    
+    
+    if (surface == true) { //
+        T_surf = 0.0;
+        summy2 = 0.0;
+        surf_albedo = 0.3;
+        surf_flux = pow(Tint, 4.0);
+        printf(" surf_flux = %e \n", surf_flux);
+        
+        
+        for (i = nlay - 2; i > -1; i--) {
+            // Initial guess for layer
+            k_Ross_Freedman(Tl[i + 1], sqrt(pl[i + 1] * pl[i]), met, kRoss[i]);
+            tau[i] = tau[i + 1] + kRoss[i] / grav * (pl[i] - pl[i + 1]);
+            summy = 0.0;
+            for (j = 0; j < 3; j++) {
+                summy += 3.0 * Beta_V[j] * pow((1.0-surf_albedo)*Tmu, 4.0) / 4.0
                      * (C[j] + D[j] * exp(-tau[i] / tau_lim) + E[j] * exp(-gam_V[j] * tau[i]));
-        }
-        Tl[i] = 3.0 * pow(Tint, 4.0) / 4.0 * (tau[i] + A + B * exp(-tau[i] / tau_lim)) + summy;
+            }      
 
-        Tl[i] = pow(Tl[i], (1.0 / 4.0));
+            Tl[i] = 3.0 * surf_flux / 4.0 * (tau[i] + A + B * exp(-tau[i] / tau_lim)) + summy;
+            //Tl[i] = 0.5*Tl[i] ;
+            Tl[i] = pow(Tl[i], (1.0 / 4.0));
 
-        // Convergence loop
-        for (j = 0; j < 5; j++) {
-            k_Ross_Freedman(sqrt(Tl[i + 1] * Tl[i]), sqrt(pl[i + 1] * pl[i]), met, kRoss[i]);
+            if (i ==0){
+                printf(" tau[0] = %e \n", tau[i]);                    
+                printf(" A = %e \n", A); 
+                printf(" B = %e \n", B);                 
+                printf(" tau[i] / tau_lim = %e \n", tau[i] / tau_lim);
+                printf(" exp(-tau[i] / tau_lim) = %e \n", exp(-tau[i] / tau_lim));                
+                printf(" (tau[i] + A + B * exp(-tau[i] / tau_lim)) = %e \n", (tau[i] + A + B * exp(-tau[i] / tau_lim)));
+                printf(" tau[1] = %e \n", tau[1]);                                 
+                printf(" tau[1] / tau_lim = %e \n", tau[1] / tau_lim);
+                printf(" exp(-tau[1] / tau_lim) = %e \n", exp(-tau[1] / tau_lim));                
+                printf(" (tau[1] + A + B * exp(-tau[1] / tau_lim)) = %e \n", (tau[1] + A + B * exp(-tau[1] / tau_lim)));
+                tau_P_Ref = tau[i] + kRoss[0] / grav * (P_Ref - pl[0]);
+                summy_surf = 0.0;
+                for (k = 0; k < 3; k++) {
+                    summy_surf += 3.0 * Beta_V[k] * pow((1.0-surf_albedo)*Tmu, 4.0) / 4.0
+                         * (C[k] + D[k] * exp(-tau_P_Ref/ tau_lim) + E[k] * exp(-gam_V[k] * tau_P_Ref));
+                }
+                //summy_surf = summy_surf
+                //              - 3.0 * Beta_V[k] * summy_surf / 4.0
+                //              * (C[k] + D[k] * exp(-tau_P_Ref/ tau_lim) + E[k] * exp(-gam_V[k] * tau_P_Ref));
+                    
+                //T_surf = summy_surf - pow(surf_flux, 4.0);
+                //summy_surf = summy_surf - StBC * pow(summy_surf,2.0); 
+                T_surf = pow(summy_surf/(pow(Csurf,0.25)), (1.0 / 4.0)) ; // Csurf;
+                surf_flux = pow(T_surf, 4.0);
+                
+                printf(" surf_flux = %e \n", surf_flux);
+                printf(" init_Csurf = %e K\n", Csurf);
+                printf(" init_surface_temperature_parmentier[%d] = %e K\n", 0, T_surf);
+                
+                printf(" Tl[%d] = %e K\n", 0, Tl[0]);
+                printf(" Tl[%d] = %e K\n", nlay - 2, Tl[nlay - 2]);
+            }
+        }             
+    }
+    else {
+        for (i = nlay - 2; i > -1; i--) {
+            // Initial guess for layer
+            k_Ross_Freedman(Tl[i + 1], sqrt(pl[i + 1] * pl[i]), met, kRoss[i]);
 
             tau[i] = tau[i + 1] + kRoss[i] / grav * (pl[i] - pl[i + 1]);
-            summy  = 0.0;
-            for (k = 0; k < 3; k++) {
-                summy += 3.0 * Beta_V[k] * pow(Tmu, 4.0) / 4.0
-                         * (C[k] + D[k] * exp(-tau[i] / tau_lim) + E[k] * exp(-gam_V[k] * tau[i]));
-            }
-            Tl[i] = 3.0 * pow(Tint, 4.0) / 4.0 * (tau[i] + A + B * exp(-tau[i] / tau_lim)) + summy;
 
+            summy = 0.0;
+            for (j = 0; j < 3; j++) {
+                summy += 3.0 * Beta_V[j] * pow(Tmu, 4.0) / 4.0
+                     * (C[j] + D[j] * exp(-tau[i] / tau_lim) + E[j] * exp(-gam_V[j] * tau[i]));
+            }
+        
+            Tl[i] = 3.0 * pow(Tint, 4.0) / 4.0 * (tau[i] + A + B * exp(-tau[i] / tau_lim)) + summy;
             Tl[i] = pow(Tl[i], (1.0 / 4.0));
+            
+
+            // Convergence loop
+            for (j = 0; j < 5; j++) {
+                k_Ross_Freedman(sqrt(Tl[i + 1] * Tl[i]), sqrt(pl[i + 1] * pl[i]), met, kRoss[i]);
+
+                tau[i] = tau[i + 1] + kRoss[i] / grav * (pl[i] - pl[i + 1]);
+                summy  = 0.0;
+                for (k = 0; k < 3; k++) {
+                    summy += 3.0 * Beta_V[k] * pow(Tmu, 4.0) / 4.0
+                         * (C[k] + D[k] * exp(-tau[i] / tau_lim) + E[k] * exp(-gam_V[k] * tau[i]));
+                }
+            
+                Tl[i] = 3.0 * pow(Tint, 4.0) / 4.0 * (tau[i] + A + B * exp(-tau[i] / tau_lim)) + summy;
+                Tl[i] = pow(Tl[i], (1.0 / 4.0));
+            }
+            
         }
     }
+    
+
+    
+    
 }
 
 ///////////////////////////////////////////////////////////////
@@ -1261,6 +1335,7 @@ void Parmentier_bilinear_interpolation_IC(int       id,
 
     Tskin =
         3.0 * pow(Tint, 4) / 4.0 * (tau[nlay - 1] + A + B * exp(-tau[nlay - 1] / tau_lim)) + summy;
+    
     Tskin = pow(Tskin, (1.0 / 4.0));
 
 
@@ -1408,7 +1483,7 @@ void adiabat_correction(int id, int nlay, double*(&Tl), double* pressure_h, doub
 //////////////////////////////////////////////////////////////
 
 // Subroutine that corrects for adiabatic region following Parmentier & Guillot (2015)
-void IC_adiabat_correction(int nlay, double*(&Tl), double* pressure_h, double Gravit) {
+void IC_adiabat_correction(int nlay, double*(&Tl), double* pressure_h, double Gravit, bool surface) {
     // dependcies
     //// main_parameters::nlay  -> "FMS_RC_para_&_const.cpp"
     //// pow -> math
@@ -1427,7 +1502,7 @@ void IC_adiabat_correction(int nlay, double*(&Tl), double* pressure_h, double Gr
 
 
     // start operations
-
+    
     for (i = (nlay - 1); i > 1; i--) {
 
         gradrad[i] =

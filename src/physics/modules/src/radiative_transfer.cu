@@ -53,8 +53,11 @@
 #include <stdlib.h>
 #include <string>
 
+
+
 #include <cstdio>
 #include <ctime> // time_t
+
 
 radiative_transfer::radiative_transfer() {
 }
@@ -90,6 +93,21 @@ void radiative_transfer::print_config() {
     log::printf("    Spin up stop step           = %d.\n", spinup_stop_step);
     log::printf("    Spin down start step        = %d.\n", spindown_start_step);
     log::printf("    Spin down stop step         = %d.\n", spindown_stop_step);
+    
+    
+    log::printf("    Mood mode                   = %s \n", moon_irr_config ? "true" : "false");
+    log::printf("    distance host to moon (m)   = %f.\n", moon_host_D_config);
+    log::printf("    radius of host (m)          = %f.\n", radius_host_config);
+    
+    
+    log::printf("    if picket-fence method table number used for gamma  = %f.\n", table_num_parmentier_config);
+    
+    cudaDeviceSynchronize();
+    cuda_check_status_or_exit(__FILE__, __LINE__);
+    
+    
+    
+
 }
 
 bool radiative_transfer::initialise_memory(const ESP &              esp,
@@ -98,13 +116,17 @@ bool radiative_transfer::initialise_memory(const ESP &              esp,
     // double picket_fence_mod = false;
 
     bool config_OK = true;
+    
+    printf("rt_type is equal to %i\n", rt_type);
 
     if (rt_type_str == "DualbandGray" || rt_type_str == "DualbandGrey" || rt_type_str == "DG") {
         rt_type = DUALBANDGRAY;
+        printf("rt_type is set to DualbandGray");
         config_OK &= true;
     }
     else if (rt_type_str == "PicketFence" || rt_type_str == "PF") {
-        rt_type = PICKETFENCE;
+        rt_type = PICKETFENCE;        
+        printf("rt_type is set to PicketFence");
         config_OK &= true;
     }
     else {
@@ -116,9 +138,16 @@ bool radiative_transfer::initialise_memory(const ESP &              esp,
         log::printf("Error in configuration file\n");
         exit(-1);
     }
+    
+    
 
     cudaMalloc((void **)&ASR_d, esp.point_num * sizeof(double));
     cudaMalloc((void **)&OLR_d, esp.point_num * sizeof(double));
+    
+    
+    cudaMalloc((void **)&moon_host_angles_d, esp.point_num * sizeof(double));
+    moon_host_angles_h = (double *)malloc(esp.point_num * sizeof(double));
+    
 
 
     if (rt_type == PICKETFENCE) {
@@ -156,8 +185,8 @@ bool radiative_transfer::initialise_memory(const ESP &              esp,
         cudaMalloc((void **)&OpaTableKappa_d, 1060 * sizeof(double));
 
 
-        k_IR_2__h = (double *)malloc(2 * esp.nv * esp.point_num * sizeof(double));
-        k_V_3__h  = (double *)malloc(3 * esp.nv * esp.point_num * sizeof(double));
+        //k_IR_2__h = (double *)malloc(2 * esp.nv * esp.point_num * sizeof(double));
+        //k_V_3__h  = (double *)malloc(3 * esp.nv * esp.point_num * sizeof(double));
         gam_V__h  = (double *)malloc(3 * esp.point_num * sizeof(double));
         gam_1__h  = (double *)malloc(esp.point_num * sizeof(double));
         gam_2__h  = (double *)malloc(esp.point_num * sizeof(double));
@@ -180,6 +209,7 @@ bool radiative_transfer::initialise_memory(const ESP &              esp,
                    esp.nvi * esp.point_num
                        * sizeof(double)); // as well used for dry convective adjustment
         cudaMalloc((void **)&be__df_e, esp.nvi * esp.point_num * sizeof(double));
+        cudaMalloc((void **)&be__surf_e, esp.point_num * sizeof(double));
         cudaMalloc((void **)&sw_down__df_e, esp.nvi * esp.point_num * sizeof(double));
         cudaMalloc((void **)&sw_down_b__df_e, esp.nvi * esp.point_num * sizeof(double));
         cudaMalloc((void **)&sw_up__df_e, esp.nvi * esp.point_num * sizeof(double));
@@ -249,6 +279,9 @@ bool radiative_transfer::initialise_memory(const ESP &              esp,
 
         cudaMalloc((void **)&surf_flux_d, esp.point_num * sizeof(double));
     }
+    
+    cudaDeviceSynchronize();
+    cuda_check_status_or_exit(__FILE__, __LINE__);
 
     return true;
 }
@@ -256,6 +289,9 @@ bool radiative_transfer::initialise_memory(const ESP &              esp,
 
 bool radiative_transfer::free_memory() {
     // double picket_fence_mod = false;
+    
+    cudaFree(moon_host_angles_d);
+    free(moon_host_angles_h);
 
     if (rt_type == PICKETFENCE) {
 
@@ -287,8 +323,8 @@ bool radiative_transfer::free_memory() {
         cudaFree(AB_d);
 
 
-        free(k_IR_2__h);
-        free(k_V_3__h);
+        //free(k_IR_2__h);
+        //free(k_V_3__h);
         free(gam_V__h);
         free(gam_1__h);
         free(gam_2__h);
@@ -314,6 +350,7 @@ bool radiative_transfer::free_memory() {
         cudaFree(tau_IRe__df_e);
         cudaFree(Te__df_e); // as well used for dry convective adjustment
         cudaFree(be__df_e);
+        cudaFree(be__surf_e);
         cudaFree(sw_down__df_e);
         cudaFree(sw_down_b__df_e);
         cudaFree(sw_up__df_e);
@@ -402,7 +439,7 @@ bool radiative_transfer::initial_conditions(const ESP &            esp,
 
     // double picket_fence_mod = false;
 
-    if (rt_type == PICKETFENCE) {
+    if (rt_type == PICKETFENCE) { //rt_type == PICKETFENCE  PF_mode_config
 
 
         RTSetup(esp.Tstar,
@@ -420,7 +457,15 @@ bool radiative_transfer::initial_conditions(const ESP &            esp,
                 n_sw_config,
                 esp.f_lw,
                 rt1Dmode_config,
-                sim.Tmean);
+                sim.Tmean,
+                moon_irr_config,
+                moon_host_D_config,
+                radius_host_config,
+                table_num_parmentier_config,
+                PF_mode_config);
+                
+
+        cudaMemset(surf_flux_d, 0, sizeof(double) * esp.point_num);
     }
     else {
         RTSetup(esp.Tstar,
@@ -438,7 +483,12 @@ bool radiative_transfer::initial_conditions(const ESP &            esp,
                 n_sw_config,
                 esp.f_lw,
                 rt1Dmode_config,
-                sim.Tmean);
+                sim.Tmean,
+                moon_irr_config,
+                moon_host_D_config,
+                radius_host_config,
+                table_num_parmentier_config,
+                PF_mode_config);
 
         cudaMemset(surf_flux_d, 0, sizeof(double) * esp.point_num);
     }
@@ -815,14 +865,42 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
         bool   bezier = true;
         double Tirr;
         double F0_h;
+        
+        double F_fromHost;
+        double Thost;
+        double Teq_Host;
         // double const sb = 5.670374419e-8;
         //
         //  Number of threads per block.
         const int NTH = 256;
+        
+        bool cudaStatus;
 
         //  Specify the block sizes.
         dim3 NB((esp.point_num / NTH) + 1, esp.nv, 1);
         dim3 NBRT((esp.point_num / NTH) + 1, 1, 1);
+        
+        
+        
+        if (moon_irr_mode) {        
+            for (int c = 0; c < esp.point_num; c++) {                
+                cudaDeviceSynchronize();
+                cuda_check_status_or_exit(__FILE__, __LINE__);
+                
+                moon_host_angles_h[c] = esp.insolation.get_host_cos_zenith_angles_moon()[c];
+                cudaStatus = cudaMemcpy(
+                    moon_host_angles_d, moon_host_angles_h, esp.point_num * sizeof(double), cudaMemcpyHostToDevice);
+                if (cudaStatus != cudaSuccess) {
+                    fprintf(stderr, "moon_host_angles_d cudaMemcpyHostToDevice failed!");
+                //goto Error;
+                }
+             }
+             F_fromHost = 0.0;
+             Teq_Host = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
+             Thost = Teq_Host * pow((radius_host) / (moon_host_D), 0.5);
+             F_fromHost = SIGMA_SB_th * pow(Thost, 4.0);
+        }
+        
 
         if (rt_type == PICKETFENCE) {
 
@@ -831,11 +909,18 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             F0_h = SIGMA_SB_th * pow(Tirr, 4.0);
 
             for (int c = 0; c < esp.point_num; c++) {
+                
+                cudaDeviceSynchronize();
+                cuda_check_status_or_exit(__FILE__, __LINE__);
+            
                 // Parmentier opacity profile parameters - first get Bond albedo
 
                 Teff[c] = pow((pow(esp.Tint, 4.0) + (1.0 / sqrt(3.0)) * pow(Tirr, 4.0)), 0.25);
 
                 Bond_Parmentier(Teff[c], sim.Gravit, AB__h[c]);
+                
+                cudaDeviceSynchronize();
+                cuda_check_status_or_exit(__FILE__, __LINE__);
 
 
                 // Recalculate Teff and then find parameters
@@ -855,7 +940,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             gam_Parmentier(esp.point_num,
                            esp.nv,
                            Teff,
-                           2,
+                           table_num_parmentier,
                            gam_V__h,
                            Beta_V__h,
                            Beta__h,
@@ -863,7 +948,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                            gam_2__h,
                            gam_P);
 
-            bool cudaStatus;
+            
             cudaStatus = cudaMemcpy(
                 gam_V_3_d, gam_V__h, 3 * esp.point_num * sizeof(double), cudaMemcpyHostToDevice);
             if (cudaStatus != cudaSuccess) {
@@ -943,6 +1028,15 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                 printf("CUDA error: %s\n", cudaGetErrorString(error));
                 exit(-1);
             }
+            
+            
+            //printf("esp.temperature_d[%d] = %e K\n", 0, esp.temperature_d[0]);
+            
+            cudaDeviceSynchronize();
+            cuda_check_status_or_exit(__FILE__, __LINE__);
+            
+            
+            
 
 
             rtm_picket_fence<<<NBRT, NTH>>>(esp.pressure_d,
@@ -971,8 +1065,11 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                             esp.insolation.get_device_cos_zenith_angles(),
                                             insol_d,
                                             esp.surface,
+                                            esp.Csurf,
                                             esp.Tsurface_d,
+                                            esp.dTsurf_dt_d,
                                             surf_flux_d,
+                                            be__surf_e,
                                             esp.areasT_d,
                                             ASR_d,
                                             OLR_d,
@@ -1018,10 +1115,27 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                             lw_down_g__dff_e,
                                             Gp__dff_l,
                                             Bp__dff_l,
+                                            F_fromHost,
                                             rt1Dmode,
-                                            sim.DeepModel);
+                                            sim.DeepModel,
+                                            moon_irr_mode,
+                                            moon_host_angles_d);
+            cudaDeviceSynchronize();
+            cuda_check_status_or_exit(__FILE__, __LINE__);
+            //printf("lw_net__df_e[%d] = %e K\n", 0, lw_net__df_e[0]);            
+            //printf("lw_net__df_e[%d] = %e K\n", esp.nv, lw_net__df_e[esp.nv]);            
+            //printf("esp.Tsurface_d[%d] = %e K\n", 0, esp.Tsurface_d[0]);            
+            //printf("OLR_d[%d] = %e K\n", 0, OLR_d[0]);
+            
+            
         }
         else {
+        
+            
+            
+            
+            cudaDeviceSynchronize();
+            cuda_check_status_or_exit(__FILE__, __LINE__);
 
             rtm_dual_band<<<NBRT, NTH>>>(esp.pressure_d,
                                          esp.Rho_d,
@@ -1075,9 +1189,13 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                          qheat_d,
                                          esp.Rd_d,
                                          Qheat_scaling,
+                                         F_fromHost,
                                          sim.gcm_off,
                                          rt1Dmode,
-                                         sim.DeepModel);
+                                         sim.DeepModel,
+                                         sim.GravHeightVar,
+                                         moon_irr_mode,
+                                         moon_host_angles_d);
         }
 
 
@@ -1107,8 +1225,18 @@ bool radiative_transfer::configure(config_file &config_reader) {
     // double picket_fence_mod = false;
 
     config_reader.append_config_var("rt_type", rt_type_str, string(rt_type_default)); //
+    
+    
+    config_reader.append_config_var("moon_irr_mode", moon_irr_config, moon_irr_config);
+    config_reader.append_config_var("moon_host_D", moon_host_D_config, moon_host_D_config);
+    config_reader.append_config_var("radius_host", radius_host_config, radius_host_config);
+    config_reader.append_config_var("PF_mode", PF_mode_config, PF_mode_config);
+    config_reader.append_config_var(
+            "table_num_parmentier", table_num_parmentier_config, table_num_parmentier_config);
+    
 
-    if (rt_type == PICKETFENCE) {
+
+    if (rt_type == PICKETFENCE) { //rt_type
 
         //cuda_check_status_or_exit(__FILE__, __LINE__);
 
@@ -1127,6 +1255,10 @@ bool radiative_transfer::configure(config_file &config_reader) {
         config_reader.append_config_var("latf_lw", latf_lw_config, latf_lw_config);
         config_reader.append_config_var(
             "kappa_lw_pole", kappa_lw_pole_config, kappa_lw_pole_config);
+            
+        
+            
+            
 
 
         // config_reader.append_config_var("f_lw", f_lw_config, f_lw_config);
@@ -1193,7 +1325,12 @@ bool radiative_transfer::store(const ESP &esp, storage &s) {
     // double picket_fence_mod = false;
 
     if (rt_type == PICKETFENCE) {
-        cudaMemcpy(insol_h, insol_d, esp.point_num * sizeof(double), cudaMemcpyDeviceToHost);
+    
+        cudaDeviceSynchronize();
+        cuda_check_status_or_exit(__FILE__, __LINE__);
+    
+        cudaMemcpy(insol_h,
+                   insol_d, esp.point_num * sizeof(double), cudaMemcpyDeviceToHost);
         s.append_table(insol_h, esp.point_num, "/insol", "W m^-2", "insolation (instantaneous)");
 
         //cuda_check_status_or_exit(__FILE__, __LINE__);
@@ -1268,20 +1405,31 @@ bool radiative_transfer::store(const ESP &esp, storage &s) {
 
         //cuda_check_status_or_exit(__FILE__, __LINE__);
 
-        cudaMemcpy(k_IR_2__h,
-                   k_IR_2_nv_d,
-                   2 * esp.nv * esp.point_num * sizeof(double),
-                   cudaMemcpyDeviceToHost);
-        s.append_table(
-            k_IR_2__h, 2 * esp.nv * esp.point_num, "/k_IR_2__h", " ", "kappa for two IR bands");
-        cudaMemcpy(k_V_3__h,
-                   k_V_3_nv_d,
-                   3 * esp.nv * esp.point_num * sizeof(double),
-                   cudaMemcpyDeviceToHost);
-        s.append_table(
-            k_V_3__h, 3 * esp.nv * esp.point_num, "/k_V_3__h", " ", "kappa for three V bands");
+        //cudaMemcpy(k_IR_2__h,
+        //           k_IR_2_nv_d,
+        //           2 * esp.nv * esp.point_num * sizeof(double),
+        //           cudaMemcpyDeviceToHost);
+        //s.append_table(
+        //    k_IR_2__h, 2 * esp.nv * esp.point_num, "/k_IR_2__h", " ", "kappa for two IR bands");
+        //cudaMemcpy(k_V_3__h,
+        //           k_V_3_nv_d,
+        //           3 * esp.nv * esp.point_num * sizeof(double),
+        //           cudaMemcpyDeviceToHost);
+        //s.append_table(
+        //    k_V_3__h, 3 * esp.nv * esp.point_num, "/k_V_3__h", " ", "kappa for three V bands");
 
         //cuda_check_status_or_exit(__FILE__, __LINE__);
+        
+        
+        // check for error
+        cudaError_t error = cudaGetLastError();
+        if (error != cudaSuccess) {
+                // print the CUDA error message and exit
+                printf("CUDA error: %s\n", cudaGetErrorString(error));
+                exit(-1);
+        }
+        cudaDeviceSynchronize();
+        cuda_check_status_or_exit(__FILE__, __LINE__);
     }
     else {
         cudaMemcpy(insol_h, insol_d, esp.point_num * sizeof(double), cudaMemcpyDeviceToHost);
@@ -1335,6 +1483,9 @@ bool radiative_transfer::store(const ESP &esp, storage &s) {
 
         //cuda_check_status_or_exit(__FILE__, __LINE__);
     }
+    
+    cudaDeviceSynchronize();
+    cuda_check_status_or_exit(__FILE__, __LINE__);
 
 
     return true;
@@ -1342,6 +1493,8 @@ bool radiative_transfer::store(const ESP &esp, storage &s) {
 
 bool radiative_transfer::store_init(storage &s) {
     // double picket_fence_mod = false;
+    
+    
 
     if (rt_type == PICKETFENCE) {
         s.append_value(Tstar, "/Tstar", "K", "Temperature of host star");
@@ -1355,6 +1508,9 @@ bool radiative_transfer::store_init(storage &s) {
         s.append_value(albedo, "/albedo", "-", "bond albedo of planet");
         //  s.append_value(kappa_sw, "/kappa_sw", "-", "gray opacity of shortwave");
         //  s.append_value(kappa_lw, "/kappa_lw", "-", "gray opacity of longwave");
+        
+        s.append_value(table_num_parmentier, "/table_num_parmentier", "-", "Tablenumber used to comupte gamma in Parmentier method");
+        
 
         s.append_value(latf_lw ? 1.0 : 0.0, "/latf_lw", "-", "use lat dependent opacity");
         s.append_value(kappa_lw_pole, "/kappa_lw_pole", "-", "gray opacity of longwave at poles");
@@ -1375,6 +1531,9 @@ bool radiative_transfer::store_init(storage &s) {
         s.append_value(albedo, "/albedo", "-", "bond albedo of planet");
         //  s.append_value(kappa_sw, "/kappa_sw", "-", "gray opacity of shortwave");
         //  s.append_value(kappa_lw, "/kappa_lw", "-", "gray opacity of longwave");
+        
+        s.append_value(radius_host, "/radius_host", "radius_host", "radius of host planet");        
+        s.append_value(moon_host_D, "/moon_host_D", "moon_host_D", "distance of host planet to moon");
 
         s.append_value(latf_lw ? 1.0 : 0.0, "/latf_lw", "-", "use lat dependent opacity");
         s.append_value(kappa_lw_pole, "/kappa_lw_pole", "-", "gray opacity of longwave at poles");
@@ -1404,13 +1563,28 @@ void radiative_transfer::RTSetup(double Tstar_,
                                  double n_sw_,
                                  double f_lw,
                                  bool   rt1Dmode_,
-                                 double Tmean) {
+                                 double Tmean,
+                                 bool moon_irr_mode_,
+                                 double radius_host_,
+                                 double moon_host_D_,
+                                 double table_num_parmentier_,
+                                 bool PF_mode_) {
 
     // double bc = 5.6703744191844314e-08; // Stefan–Boltzmann constant [W m−2 K−4]
 
     Tstar            = Tstar_;
     planet_star_dist = planet_star_dist_;
     radius_star      = radius_star_;
+    
+    radius_host      = radius_host_;
+    moon_host_D      = moon_host_D_;
+    
+    PF_mode          = PF_mode_;
+    
+    if (PF_mode) {
+      rt_type = PICKETFENCE;
+    }
+    
 
     diff_ang = diff_ang_;
     // Tint             = Tint_;
@@ -1421,6 +1595,8 @@ void radiative_transfer::RTSetup(double Tstar_,
     kappa_sw      = kappa_sw_;
     kappa_lw      = kappa_lw_;
     kappa_lw_pole = kappa_lw_pole_;
+    
+    table_num_parmentier = table_num_parmentier_;
 
     latf_lw = latf_lw_;
     n_sw    = n_sw_;

@@ -319,8 +319,9 @@ public:
     double *diffwv_d;
     double *diffrv_d;
 
-    double *diff_d;  //temporary array for diffusion calculation
-    double *diff2_d; //second temp array for diff (vertical)
+    double *diff_d;        //temporary array for diffusion calculation
+    double *diff_sponge_d; //temporary array for diffusive sponge calculation
+    double *diff2_d;       //second temp array for diff (vertical)
     // double *diffv_d1;
     // double *diffv_d2;
     double *divg_Mh_d;
@@ -422,7 +423,9 @@ public:
         bool                  output_mean,
         bool                  out_interm_momentum,
         bool                  output_diffusion,
+        bool                  DiffSponge,
         init_PT_profile_types init_PT_profile_,
+        //radiative_transfer_types rt_type_,
         double                Tint_,
         double                kappa_lw_,
         double                kappa_sw_,
@@ -442,7 +445,7 @@ public:
 
     ~ESP();
 
-    void alloc_data(bool, bool, bool, bool);
+    void alloc_data(bool, bool, bool, bool, bool);
 
     bool initial_values(const std::string &initial_conditions_filename,
                         const std::string &planet_filename,
@@ -637,6 +640,8 @@ private:
     benchmark_types core_benchmark;
 
     init_PT_profile_types init_PT_profile;
+    
+    //radiative_transfer_types rt_type;
 
     uh_thermo_types  ultrahot_thermo;
     uh_heating_types ultrahot_heating;

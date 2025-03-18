@@ -167,6 +167,20 @@ calc_zenith(double*      lonlat_d, //latitude/longitude grid
     return coszrs; //zenith angle
 }
 
+__device__ double
+calc_zenith_moon(double*      lonlat_d, //latitude/longitude grid
+                 const int    id,
+                 double  alpha_i) {
+
+    // Calculate the insolation (scaling) at a point on the surface
+
+    double coszrs_moon;
+
+    coszrs_moon = cos(lonlat_d[id * 2 + 1]) * cos(lonlat_d[id * 2] - 0.0*alpha_i);
+
+    return coszrs_moon; //zenith angle
+}
+
 // compute zenith angle for a full grid of lat/lon data
 __global__ void compute_cos_zenith_angles(double* cos_zenith_angles,
                                           double* lonlat_d,
@@ -203,6 +217,33 @@ __global__ void compute_cos_zenith_angles(double* cos_zenith_angles,
             cos_zenith_angles[column_idx] = 0.0;
         else
             cos_zenith_angles[column_idx] = coszrs;
+    }
+}
+
+// compute zenith angle for a full grid of lat/lon data
+__global__ void compute_cos_zenith_angles_moon(double* cos_zenith_angles_moon,
+                                          double* lonlat_d,
+                                          int     num_points,                                          
+                                          double  alpha_i) {
+    // helios_angle_star = pi - zenith_angle
+    // cos(helios_angle_star) = mu_star = cos(pi - zenith_angle) = -cos(zenith_angle)
+    // Zenith angle is only positive.
+    // mu_star is only negative in helios -> need to change sign outside of here for Alfrodull
+    // radiative transfer uses zenith angle
+    int column_idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (column_idx < num_points) {
+        double coszrs_moon = calc_zenith_moon(lonlat_d, //latitude/longitude grid
+                                    column_idx,
+                                     alpha_i);
+
+        //hack
+        // double coszrs = cos(75 * M_PI / 180.);
+
+        if (coszrs_moon < 0.0)
+            cos_zenith_angles_moon[column_idx] = 0.0;
+        else
+            cos_zenith_angles_moon[column_idx] = coszrs_moon;
     }
 }
 
@@ -245,6 +286,11 @@ bool Insolation::configure(config_file& config_reader) {
     config_reader.append_config_var("ecc", ecc_config, ecc_config);
     config_reader.append_config_var("obliquity", obliquity_config, obliquity_config);
     config_reader.append_config_var("longp", longp_config, longp_config);
+    
+    config_reader.append_config_var("moon_irr_mode", moon_irr_config, moon_irr_config);
+    config_reader.append_config_var("moon_host_D", moon_host_D_config, moon_host_D_config);
+    config_reader.append_config_var("radius_host", radius_host_config, radius_host_config);
+
 
     config_reader.append_config_var("insol_avg", insol_avg_str, string(insol_avg_default));
     return true;
@@ -255,6 +301,9 @@ bool Insolation::initialise_memory(const ESP&               esp,
     if (enabled) {
         cos_zenith_angles.allocate(esp.point_num);
         cos_zenith_angles.zero();
+        
+        cos_zenith_angles_moon.allocate(esp.point_num);
+        cos_zenith_angles_moon.zero();
 
         USE_BENCHMARK();
 
@@ -288,6 +337,10 @@ void Insolation::print_config() {
     log::printf("    Obliquity                   = %f deg.\n", obliquity_config);
     log::printf("    Longitude of periastron     = %f deg.\n", longp_config);
     log::printf("    Use averaged insolation     = %s \n", insol_avg_str.c_str());
+    log::printf("    Simulated moon irradiated by host planet = %s.\n", moon_irr_config ? "true" : "false");
+    log::printf("    Distance between moon and host planet    = %s \n", moon_host_D_config);
+    log::printf("    Radius of the host planet                = %s \n", radius_host_config);
+
 }
 
 bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, storage* s) {
@@ -309,6 +362,10 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         mean_anomaly_i        = fmod(ecc_anomaly_i - ecc * sin(ecc_anomaly_i), (2 * M_PI));
         alpha_i               = alpha_i_config * M_PI / 180.0;
         obliquity             = obliquity_config * M_PI / 180.0;
+        
+        moon_irr               = moon_irr_config;           // simulated moon irradiated by host planet
+        moon_host_D            = moon_host_D_config;        // distance between moon and host planet
+        radius_host            = radius_host_config;        // radius of the host planet
 
         insol_avg = NO_INSOL_AVG;
         if (insol_avg_str == "NoInsolAvg") {
@@ -377,6 +434,15 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
                             obliquity,
                             sync_rot,
                             esp.point_num);
+                            
+                        cudaDeviceSynchronize();                        
+                        cuda_check_status_or_exit(__FILE__, __LINE__);
+                        
+                        compute_cos_zenith_angles_moon<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
+                            *cos_zenith_angles_moon,
+                            esp.lonlat_d,
+                            esp.point_num,
+                            alpha_i);
                         cudaDeviceSynchronize();
                         cuda_check_status_or_exit(__FILE__, __LINE__);
 
@@ -420,6 +486,9 @@ bool Insolation::phy_loop(ESP&                   esp,
                           double                 time_step) {
 
     const int num_blocks = 256;
+    
+    cudaDeviceSynchronize();
+    cuda_check_status_or_exit(__FILE__, __LINE__);
     if (enabled) {
         USE_BENCHMARK();
 
@@ -432,6 +501,7 @@ bool Insolation::phy_loop(ESP&                   esp,
         else {
             update_spin_orbit(nstep * time_step, sim.Omega);
         }
+        
 
 
         compute_cos_zenith_angles<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
@@ -445,6 +515,15 @@ bool Insolation::phy_loop(ESP&                   esp,
             obliquity,
             sync_rot,
             esp.point_num);
+            
+        cudaDeviceSynchronize();
+        cuda_check_status_or_exit(__FILE__, __LINE__);
+        
+        compute_cos_zenith_angles_moon<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
+            *cos_zenith_angles_moon,
+            esp.lonlat_d,
+            esp.point_num,
+            alpha_i);
         cudaDeviceSynchronize();
         cuda_check_status_or_exit(__FILE__, __LINE__);
 
@@ -515,6 +594,7 @@ void Insolation::update_spin_orbit(double time, double Omega) {
 
     // Update the insolation related parameters for spin and orbit
     double ecc_anomaly, true_long;
+    const double pi       = atan((double)(1)) * 4;
 
     mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
 
@@ -525,5 +605,6 @@ void Insolation::update_spin_orbit(double time, double Omega) {
 
     sin_decl = sin(obliquity) * sin(true_long);
     cos_decl = sqrt(1.0 - sin_decl * sin_decl);
-    alpha    = -Omega * time + true_long - true_long_i + alpha_i;
+    alpha = -Omega * time + true_long - true_long_i + alpha_i;
+    //alpha    = -360.0*(Omega/(2.0*pi)) * time + true_long - true_long_i + alpha_i;
 }

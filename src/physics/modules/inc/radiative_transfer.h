@@ -108,6 +108,16 @@ private:
     double n_lw_config          = 2.0;   // power law dependence for unmixed absorbers in LW
     double n_sw_config          = 1.0;   // power law dependence for mixed/unmixed absorbers in SW
     // double f_lw_config       = 0.5;    // fraction of taulw in well-mixed absorber
+    
+    
+    bool   moon_irr_config      = false;
+    double moon_host_D_config   = 0.0;
+    double radius_host_config   = 0.0;
+    
+    bool   PF_mode_config       = false;  // if the RT scheme uses picket-fence or a double grey RT scheme
+    //string rt_type_config       = DualbandGray;
+    
+    double table_num_parmentier_config = 2; // if picket-fence, table number used to compute gamma (with/without Tio)
 
     // double Csurf_config    = 1e7;   // heat capacity of surface (J K^-1 m^-2)
     bool rt1Dmode_config = false; // 1D mode=all columns are irradiated identically
@@ -172,8 +182,8 @@ private:
     double* Beta__h;
     double* gam_1__h;
     double* gam_2__h;
-    double* k_IR_2__h;
-    double* k_V_3__h;
+    //double* k_IR_2__h;
+    //double* k_V_3__h;
     double* net_F_h;
     double* AB__h;
     double* Teff;
@@ -205,7 +215,8 @@ private:
     double* tau_Ve__df_e;
     double* tau_IRe__df_e;
     double* Te__df_e;
-    double* be__df_e;
+    double* be__df_e;    
+    double* be__surf_e;
     double* sw_down__df_e;
     double* sw_down_b__df_e;
     double* sw_up__df_e;
@@ -228,7 +239,15 @@ private:
     double* lw_down_g__dff_e;
     double* Gp__dff_l;
     double* Bp__dff_l;
-
+    
+    
+    bool moon_irr_mode;
+    double radius_host;
+    double moon_host_D;
+    double table_num_parmentier;
+    bool PF_mode;
+    double* moon_host_angles_d;
+    double* moon_host_angles_h;
 
     //  These arrays are for temporary usage in RT code
     double* dtemp;
@@ -250,5 +269,10 @@ private:
                     double n_sw_,
                     double f_lw,
                     bool   rt1Dmode,
-                    double Tmean);
+                    double Tmean,
+                    bool moon_irr_mode,
+                    double radius_host_,
+                    double moon_host_D_,
+                    double table_num_parmentier_,
+                    bool PF_mode);
 };

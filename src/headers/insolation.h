@@ -102,6 +102,16 @@ public:
     double get_mean_motion() {
         return mean_motion;
     }
+    
+        // get pointer to data on device
+    double *get_device_cos_zenith_angles_moon() {
+        return *cos_zenith_angles_moon;
+    };
+
+    // fetch data to host and get pointer to data
+    std::shared_ptr<double[]> get_host_cos_zenith_angles_moon() {
+        return cos_zenith_angles_moon.get_host_data();
+    }
 
 private:
     bool enabled = false;
@@ -136,11 +146,23 @@ private:
     double obliquity_config   = 0;        // obliquity (tilt of spin axis) (rad)
     double alpha_i_config     = 0;        // initial right asc of host star (relative to long = 0)
     double longp_config       = 0;        // longitude of periastron (rad)
+    
+    // moon mod
+    bool   moon_irr_config    = false;    // simulated moon irradiated by host planet
+    double moon_host_D_config = 0;        // distance between moon and host planet
+    double radius_host_config = 0;        // radius of the host planet
+    bool   moon_irr_mode      = false;    // simulated moon irradiated by host planet
+    double moon_host_D        = 0;        // distance between moon and host planet
+    double radius_host        = 0;        // radius of the host planet
+    double moon_irr           = 0;        //
+    
+    double table_num_parmentier_config = 2; // if picket-fence, table number used to compute gamma (with/without Tio)
 
     insolation_average_types insol_avg; // use averaging of insolation/stellar forcing
     string                   insol_avg_str;
 
     cuda_device_memory<double> cos_zenith_angles;
+    cuda_device_memory<double> cos_zenith_angles_moon;
 
     void update_spin_orbit(double time, double Omega);
 };

@@ -90,6 +90,7 @@
 #define output_mean_default true          // output mean quantities
 #define out_interm_momentum_default false // output intermediate momentum
 #define output_diffusion_default false    // output diffusion operators
+#define GravHeightVar_default false       // Vary gravity with height
 
 // Initial conditions
 #define rest_default true                                 // Starting from rest
@@ -142,6 +143,11 @@
 #define transition_altitude_default 1000.0
 #define lowest_layer_thickness_default 2.0
 
+#define vert_dense_around_default false
+#define frac_height_dense_default 0.7
+#define a_dense_default 1.0
+#define b_dense_default 6.0
+
 enum benchmark_types {
     NO_BENCHMARK         = 0,
     HELD_SUAREZ          = 1,
@@ -155,6 +161,10 @@ enum benchmark_types {
 
 
 enum init_PT_profile_types { ISOTHERMAL = 0, GUILLOT = 1, CONSTBV = 2, PARMENTIER = 3 };
+
+//enum radiative_transfer_types { DUALBANDGRAY = 0, PICKETFENCE = 1 };
+
+//enum rt_types { ISOTHERMAL = 0, PARMENTIER = 1 };
 
 enum uh_thermo_types { NO_UH_THERMO = 0, VARY_R_CP = 1, FULL = 2 };
 

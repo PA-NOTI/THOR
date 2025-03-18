@@ -27,6 +27,7 @@
 #include "debug_helpers.h"
 
 
+
 __global__ void annual_insol(double *insol_ann_d, double *insol_d, int nstep, int num) {
 
     int id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -54,14 +55,22 @@ __device__ void radcsw(double *phtemp,
                        int     id,
                        int     nv,
                        double *insol_d,
-                       bool    DeepModel) {
+                       bool    DeepModel,
+                       bool    GravHeightVar) {
 
     //  Calculate upward, downward, and net flux.
     //  Downward Directed Radiation
 
     // double gocp;
     //double tau      = (tausw / ps0) * (phtemp[id * (nv + 1) + nv]);
-    double tau      = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
+    double tau;
+    if (GravHeightVar) {
+        tau = (kappa_sw / (gravit * pow(A / (A + Altitudeh_d[nv + 1]), 2)))
+              * (phtemp[id * (nv + 1) + nv]);
+    }
+    else {
+        tau = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
+    }
     insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
     double flux_top = insol_d[id] * (1.0 - alb);
     double rup, rlow;
@@ -168,7 +177,10 @@ __device__ void radclw(double *phtemp,
                        double  A,
                        int     id,
                        int     nv,
-                       bool    DeepModel) {
+                       bool    DeepModel,
+                       bool    moon_irr_config,
+                       double *moon_host_angles_d,
+                       double  F_fromHost) {
 
     // double gocp = gravit / Cp;
     double tb, tl, tt;
@@ -182,6 +194,9 @@ __device__ void radclw(double *phtemp,
     //  Downward Directed Radiation
     //
     flw_dn_d[id * (nv + 1) + nv] = 0.0; // Upper boundary
+    if (moon_irr_config) {        
+            flw_dn_d[id * (nv + 1) + nv] = F_fromHost*moon_host_angles_d[id];
+    } 
     for (int lev = nv - 1; lev >= 0; lev--) {
         double ed = 0.0;
         if (tau_d[id * nv * 2 + 2 * lev + 1] < 0.0)
@@ -357,9 +372,13 @@ __global__ void rtm_dual_band(double *pressure_d,
                               double *DG_Qheat_d, // internal qheat for debugging
                               double *Rd_d,
                               double  Qheat_scaling,
+                              double  F_fromHost,
                               bool    gcm_off,
                               bool    rt1Dmode,
-                              bool    DeepModel) {
+                              bool    DeepModel,
+                              bool    GravHeightVar,
+                              bool    moon_irr_config,
+                              double *moon_host_angles_d) {
 
 
     //
@@ -388,8 +407,15 @@ __global__ void rtm_dual_band(double *pressure_d,
         // Calculate pressures and temperatures at interfaces
         for (int lev = 0; lev <= nv; lev++) {
             if (lev == 0) {
-                psm = pressure_d[id * nv + 1]
-                      - Rho_d[id * nv + 0] * gravit * (-Altitude_d[0] - Altitude_d[1]);
+                if (GravHeightVar) {
+                    psm = pressure_d[id * nv + 1]
+                          - Rho_d[id * nv + 0] * gravit * pow(A / (A + Altitude_d[0]), 2)
+                                * (-Altitude_d[0] - Altitude_d[1]);
+                }
+                else {
+                    psm = pressure_d[id * nv + 1]
+                          - Rho_d[id * nv + 0] * gravit * (-Altitude_d[0] - Altitude_d[1]);
+                }
                 ps = 0.5 * (pressure_d[id * nv + 0] + psm);
 
                 phtemp[id * nvi + 0] = ps;
@@ -485,7 +511,8 @@ __global__ void rtm_dual_band(double *pressure_d,
                    id,
                    nv,
                    insol_d,
-                   DeepModel);
+                   DeepModel,
+                   GravHeightVar);
         }
         else {
             insol_d[id] = 0;
@@ -511,6 +538,9 @@ __global__ void rtm_dual_band(double *pressure_d,
         for (int lev = 0; lev <= nv; lev++) {
             flw_dn_d[id * nvi + lev] = 0.0;
         }
+        
+        
+        
 
         radclw(phtemp,
                ttemp,
@@ -529,7 +559,10 @@ __global__ void rtm_dual_band(double *pressure_d,
                A,
                id,
                nv,
-               DeepModel);
+               DeepModel,
+               moon_irr_config,
+               moon_host_angles_d,
+               F_fromHost);
 
         if (surface == true) {
             surf_flux_d[id] += flw_dn_d[id * nvi + 0] - flw_up_d[id * nvi + 0];
@@ -1030,7 +1063,9 @@ __device__ void lw_grey_updown_linear(int     id,
                                       double *lw_down_g__dff_e,
                                       double *Gp__dff_l,
                                       double *Bp__dff_l,
-                                      double  be_int) {
+                                      double  be_int,
+                                      bool    surface,
+                                      double *be__surf_e) {
     // dependencies
     //// expll -> math
     //// atan -> math
@@ -1132,8 +1167,11 @@ __device__ void lw_grey_updown_linear(int     id,
         // Peform upward loop
         // Lower boundary condition - internal heat definition Fint = F_down - F_up
         // here we use the same condition but use intensity units to be consistent
-
-        lw_up_g__dff_e[id * nlev + 0] = be_int + lw_down_g__dff_e[id * nlev + 0];
+        if (surface == true) {
+            lw_up_g__dff_e[id * nlev + 0] = be__surf_e[id] + lw_down_g__dff_e[id * nlev + 0];
+        } else {
+            lw_up_g__dff_e[id * nlev + 0] = be_int + lw_down_g__dff_e[id * nlev + 0];
+        }
         for (k = 1; k < nlev; k++) {
             lw_up_g__dff_e[id * nlev + k] =
                 lw_up_g__dff_e[id * nlev + k - 1] * edel__dff_l[id * nlay + k - 1]
@@ -1167,6 +1205,7 @@ __device__ void ts_short_char(int       id,
                               const int nlev,
                               double *  Altitude_d,
                               double *  Altitudeh_d,
+                              double    timestep,
                               double *  Rho_d,
                               double *  Tl,
                               double *  pl,
@@ -1209,7 +1248,23 @@ __device__ void ts_short_char(int       id,
                               double *Gp__dff_l,
                               double *Bp__dff_l,
                               double *ASR_d,
-                              double *OLR_d) {
+                              double *OLR_d,
+                              bool    surface,
+                              double *Tsurface_d,
+                              double *dTsurf_dt_d,
+                              double *surf_flux_d,
+                              double  Csurf,
+                              double *be__surf_e,
+                              bool    moon_irr_mode,
+                              double  F_fromHost,
+                              double *moon_host_angles_d) {
+
+    //   surface mode 
+    //   is still unfinished
+
+    //   NANs created
+
+
     // dependcies
     //// powll -> include math
     //// log10f -> include math
@@ -1318,6 +1373,10 @@ __device__ void ts_short_char(int       id,
         sw_down__df_e[id * nlev + i] = 0.0;
         sw_up__df_e[id * nlev + i]   = 0.0;
     }
+    
+    if (surface == true) {
+        surf_flux_d[id] = 0.0;
+    }
 
 
     // Incident flux in band
@@ -1364,18 +1423,30 @@ __device__ void ts_short_char(int       id,
     for (int channel = 0; channel < 2; channel++) {
         // Find the opacity structure
         tau_struct(id, nlev, Rho_d, pl, grav, Altitudeh_d, k_IR_2_nv_d, 2, channel, tau_IRe__df_e);
-
-
+        
         //printf("tau_struct finished\n");
 
         // Blackbody fluxes (note divide by pi for correct units)
+
+
         for (int i = 0; i < nlev; i++) {
             be__df_e[id * nlev + i] =
                 (StBC * pow((Te__df_e[id * nlev + i]), 4.0) / pi) * Beta_2_d[id * 2 + channel];
+            if (moon_irr_mode) {
+                be__df_e[id * nlev + i] = be__df_e[id * nlev + i] + F_fromHost * moon_host_angles_d[id];
+            }
         }
-
-
-        double be_int = (StBC * pow((Tint), 4.0) / pi) * Beta_2_d[id * 2 + channel];
+        
+                  
+        double be_int = 0.0;
+        if (surface == true) {
+            be__surf_e[id] = (StBC * pow((Tsurface_d[id]), 4.0) / pi) * Beta_2_d[id * 2 + channel];
+            //be__surf_e[id] = 0.0;
+        }
+        else {
+            be_int= (StBC * pow((Tint), 4.0) / pi) * Beta_2_d[id * 2 + channel];
+        }
+                
 
         // Calculate lw flux
         lw_grey_updown_linear(id,
@@ -1396,7 +1467,9 @@ __device__ void ts_short_char(int       id,
                               lw_down_g__dff_e,
                               Gp__dff_l,
                               Bp__dff_l,
-                              be_int);
+                              be_int,
+                              surface,
+                              be__surf_e);
 
         //printf("lw_grey_updown_linear finished\n");
 
@@ -1409,17 +1482,30 @@ __device__ void ts_short_char(int       id,
         }
 
         OLR_d[id] += lw_up__df_e[id * nlev + nlev - 1];
+        
+        
     }
 
     // Net fluxes
     for (int i = 0; i < nlev; i++) {
         lw_net__df_e[id * nlev + i] = lw_down__df_e[id * nlev + i] - lw_up__df_e[id * nlev + i];
         sw_net__df_e[id * nlev + i] = sw_down__df_e[id * nlev + i] - sw_up__df_e[id * nlev + i];
-        net_F_nvi_d[id * nlev + i]  = lw_net__df_e[id * nlev + i] + sw_net__df_e[id * nlev + i];
+        net_F_nvi_d[id * nlev + i]  = lw_net__df_e[id * nlev + i] + sw_net__df_e[id * nlev + i];       
     }
+    
+    
+    
+    if (surface == true) {
+        surf_flux_d[id] = net_F_nvi_d[id * nlev + 0];
+        Tsurface_d[id] += surf_flux_d[id] * timestep / Csurf;
+                              + dTsurf_dt_d[id] * timestep; // put dTsurf here temporarily
 
+         if (Tsurface_d[id] < 0) {
+                Tsurface_d[id] = 0;
+         }
+    }
+    
 
-    //printf("Kitzmann finished\n");
 }
 
 
@@ -1453,8 +1539,11 @@ __global__ void rtm_picket_fence(double *pressure_d,
                                  double *zenith_angles,
                                  double *insol_d,
                                  bool    surface,
+                                 double  Csurf,
                                  double *Tsurface_d,  // ??? relevant
+                                 double *dTsurf_dt_d,
                                  double *surf_flux_d, // ??? relevant
+                                 double *be__surf_e,
                                  double *areasT_d,
                                  double *ASR_d, // ??? relevant
                                  double *OLR_d, // ??? relevant
@@ -1502,9 +1591,13 @@ __global__ void rtm_picket_fence(double *pressure_d,
                                  double *lw_down_g__dff_e,
                                  double *Gp__dff_l,
                                  double *Bp__dff_l,
+                                 // flux to moon from host planet
+                                 double F_fromHost,
                                  //general model parameters
                                  bool rt1Dmode,
-                                 bool DeepModel) {
+                                 bool DeepModel,
+                                 bool moon_irr_mode,
+                                 double *moon_host_angles_d) {
 
 
     //
@@ -1609,6 +1702,8 @@ __global__ void rtm_picket_fence(double *pressure_d,
                     k_IR_2_nv_d[id * nv * 2 + 0 * nv + level] * gam_1_d[id];
             }
         }
+        
+        
 
         // !! Radiation - Comment in what scheme you want to use - Heng model won't work!
 
@@ -1623,6 +1718,7 @@ __global__ void rtm_picket_fence(double *pressure_d,
                           nvi,
                           Altitude_d,
                           Altitudeh_d,
+                          timestep,
                           Rho_d,
                           temperature_d,
                           pressure_d,
@@ -1665,7 +1761,18 @@ __global__ void rtm_picket_fence(double *pressure_d,
                           Gp__dff_l,
                           Bp__dff_l,
                           ASR_d,
-                          OLR_d);
+                          OLR_d,
+                          surface,
+                          Tsurface_d,
+                          dTsurf_dt_d,
+                          surf_flux_d,
+                          Csurf,
+                          be__surf_e,
+                          moon_irr_mode,
+                          F_fromHost,
+                          moon_host_angles_d);
+                          
+            
         }
         else {
             flux_top    = 0.0;
@@ -1676,6 +1783,7 @@ __global__ void rtm_picket_fence(double *pressure_d,
                           nvi,
                           Altitude_d,
                           Altitudeh_d,
+                          timestep,
                           Rho_d,
                           temperature_d,
                           pressure_d,
@@ -1718,8 +1826,19 @@ __global__ void rtm_picket_fence(double *pressure_d,
                           Gp__dff_l,
                           Bp__dff_l,
                           ASR_d,
-                          OLR_d);
+                          OLR_d,
+                          surface,
+                          Tsurface_d,
+                          dTsurf_dt_d,
+                          surf_flux_d,
+                          Csurf,
+                          be__surf_e,
+                          moon_irr_mode,
+                          F_fromHost,
+                          moon_host_angles_d);
         }
+        
+        
 
 
         for (int level = 0; level < nv; level++) {
@@ -1728,15 +1847,6 @@ __global__ void rtm_picket_fence(double *pressure_d,
                 (net_F_nvi_d[id * nvi + level] - net_F_nvi_d[id * nvi + level + 1])
                 / ((Altitudeh_d[level] - Altitudeh_d[level + 1]));
             //((Altitudeh_d[level] - Altitudeh_d[level+1])*Rho_d[id*nv  + level]*gravit);
-        }
-
-
-        if (surface == true) {
-            Tsurface_d[id]  = timestep * dtemp[id * nv + 0];
-            surf_flux_d[id] = dtemp[id * nv + 0];
-
-            if (Tsurface_d[id] < 0)
-                Tsurface_d[id] = 0;
         }
 
         //printf("Tsurface_d is computed\n");
@@ -1766,7 +1876,7 @@ __global__ void rtm_picket_fence(double *pressure_d,
             }
             DG_Qheat_d[id * nv + lev] = dtemp[id * nv + lev];
             profx_Qheat_d[id * nv + lev] += Qheat_scaling * dtemp[id * nv + lev];
-            if (id == 430) {
+            if (12 == 430) {
                 if (isnan(profx_Qheat_d[id * nv + lev])) {
                     printf("profx_Qheat_d has NaNs - stop here");
                 }
