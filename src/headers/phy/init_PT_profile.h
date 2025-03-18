@@ -958,7 +958,7 @@ void Parmentier_IC_1D(const int nlay,
     //
 
     // work variables
-    int    i, j, k, z;
+    int    i, j, k;
     double Teff0, Teff, Tmu, Bond, Tskin;
     double gam_V[3] = {0}, Beta_V[3] = {0};
     double Beta[2];
@@ -971,14 +971,12 @@ void Parmentier_IC_1D(const int nlay,
 
 
     double summy;
-    double summy2;
     
     double tau_P_Ref;
     double T_surf;
     double summy_surf;
     double surf_albedo;
     double surf_flux;
-    const double StBC = 5.670374419e-8;
     const double pi = atan(1.0) * 4;
 
     // start operations
@@ -1108,7 +1106,6 @@ void Parmentier_IC_1D(const int nlay,
     
     if (surface == true) { //
         T_surf = 0.0;
-        summy2 = 0.0;
         surf_albedo = 0.3;
         surf_flux = pow(Tint, 4.0);
         printf(" surf_flux = %e \n", surf_flux);

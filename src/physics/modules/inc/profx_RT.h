@@ -56,7 +56,6 @@ __device__ void radcsw(double *phtemp,
                        int     nv,
                        double *insol_d,
                        bool    DeepModel,
-                       bool    GravHeightVar,
                        bool    GravHeightVar) {
 
     //  Calculate upward, downward, and net flux.
@@ -70,14 +69,7 @@ __device__ void radcsw(double *phtemp,
               * (phtemp[id * (nv + 1) + nv]);
     }
     else {
-  ;
-    if (GravHeightVar) {
-        tau = (kappa_sw / (gravit * pow(A / (A + Altitudeh_d[nv + 1]), 2)))
-              * (phtemp[id * (nv + 1) + nv]);
-    }
-    else {
-        tau tau = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
-    }
+        tau = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
     }
     insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
     double flux_top = insol_d[id] * (1.0 - alb);
@@ -384,7 +376,6 @@ __global__ void rtm_dual_band(double *pressure_d,
                               bool    gcm_off,
                               bool    rt1Dmode,
                               bool    DeepModel,
-                              bool    GravHeightVar,
                               bool    GravHeightVar,
                               bool    moon_irr_config,
                               double *moon_host_angles_d) {
