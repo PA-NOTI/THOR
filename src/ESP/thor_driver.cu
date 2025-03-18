@@ -255,10 +255,12 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                                       Rd_d,
                                                                       Altitude_d,
                                                                       Altitudeh_d,
+                                                                      sim.A,
                                                                       point_num,
                                                                       nv,
                                                                       calcT,
-                                                                      energy_equation);
+                                                                      energy_equation,
+                                                                      sim.GravHeightVar);
 
 
         //      Initializes slow terms.
@@ -429,18 +431,15 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
             cudaMemset(diff_d, 0, sizeof(double) * 6 * point_num * nv);
 
             cudaDeviceSynchronize();
-            bool firststep;
+            int stepnum = 0;
             for (int ihyp = 0; ihyp < sim.HyDiffOrder / 2 - 1; ihyp++) {
-                if (ihyp == 0)
-                    firststep = 1;
-                else
-                    firststep = 0;
                 //Updates: diffmh_d, diffw_d, diffrh_d, diffpr_d, diff_d
                 Diffusion_Op<LN, LN><<<NBD, NT>>>(diffmh_d,
                                                   diffw_d,
                                                   diffrh_d,
                                                   diffpr_d,
                                                   diff_d,
+                                                  diff_sponge_d,
                                                   Mhk_d,
                                                   Rhok_d,
                                                   temperature_d,
@@ -458,8 +457,8 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                   Cp_d,
                                                   maps_d,
                                                   nl_region,
-                                                  firststep,
-                                                  0,
+                                                  stepnum,
+                                                  false,
                                                   sim.DeepModel,
                                                   sim.DiffSponge,
                                                   order_diff_sponge,
@@ -474,6 +473,7 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                    diffrh_d,
                                                    diffpr_d,
                                                    diff_d,
+                                                   diff_sponge_d,
                                                    Mhk_d,
                                                    Rhok_d,
                                                    temperature_d,
@@ -492,8 +492,8 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                    Cp_d,
                                                    point_local_d,
                                                    point_num,
-                                                   firststep,
-                                                   0,
+                                                   stepnum,
+                                                   false,
                                                    sim.DeepModel,
                                                    sim.DiffSponge,
                                                    order_diff_sponge,
@@ -502,6 +502,7 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                    energy_equation,
                                                    sim.HyDiffOrder);
                 cudaDeviceSynchronize();
+                stepnum += 1;
             }
 
             BENCH_POINT_I_S(current_step, rk, "Diffusion_Op1", (), ("diff_d"))
@@ -516,6 +517,7 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                               diffrh_d,
                                               diffpr_d,
                                               diff_d,
+                                              diff_sponge_d,
                                               Mhk_d,
                                               Rhok_d,
                                               temperature_d,
@@ -533,8 +535,8 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                               Cp_d,
                                               maps_d,
                                               nl_region,
-                                              0,
-                                              1,
+                                              stepnum,
+                                              true,
                                               sim.DeepModel,
                                               sim.DiffSponge,
                                               order_diff_sponge,
@@ -548,6 +550,7 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                diffrh_d,
                                                diffpr_d,
                                                diff_d,
+                                               diff_sponge_d,
                                                Mhk_d,
                                                Rhok_d,
                                                temperature_d,
@@ -566,8 +569,8 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                Cp_d,
                                                point_local_d,
                                                point_num,
-                                               0,
-                                               1,
+                                               stepnum,
+                                               true,
                                                sim.DeepModel,
                                                sim.DiffSponge,
                                                order_diff_sponge,
@@ -928,7 +931,8 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                profx_dMh_d,
                                                profx_dWh_d,
                                                profx_Qheat_d,
-                                               energy_equation);
+                                               energy_equation,
+                                               sim.GravHeightVar);
         cudaDeviceSynchronize();
         BENCH_POINT_I_S(current_step,
                         rk,
@@ -974,7 +978,8 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                               profx_dMh_d,
                                               profx_dWh_d,
                                               profx_Qheat_d,
-                                              energy_equation);
+                                              energy_equation,
+                                              sim.GravHeightVar);
         cudaDeviceSynchronize();
 
         BENCH_POINT_I_S(current_step,
@@ -1240,6 +1245,7 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                 nv,
                 nvi,
                 sim.DeepModel,
+                sim.GravHeightVar,
                 *diag.diagnostics_global_flag, // Pass the diagnostics arrays device pointers
                 *diag.diagnostics);
 
@@ -1329,6 +1335,7 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                      nl_region,
                                                      sim.DeepModel,
                                                      energy_equation,
+                                                     sim.GravHeightVar,
                                                      *diag.diagnostics_global_flag,
                                                      *diag.diagnostics);
 
@@ -1373,6 +1380,7 @@ __host__ void ESP::Thor(const SimulationSetup &sim, kernel_diagnostics &diag) {
                                                     nv,
                                                     sim.DeepModel,
                                                     energy_equation,
+                                                    sim.GravHeightVar,
                                                     *diag.diagnostics_global_flag,
                                                     *diag.diagnostics);
 
