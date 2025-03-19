@@ -338,8 +338,8 @@ void Insolation::print_config() {
     log::printf("    Longitude of periastron     = %f deg.\n", longp_config);
     log::printf("    Use averaged insolation     = %s \n", insol_avg_str.c_str());
     log::printf("    Simulated moon irradiated by host planet = %s.\n", moon_irr_config ? "true" : "false");
-    log::printf("    Distance between moon and host planet    = %s \n", moon_host_D_config);
-    log::printf("    Radius of the host planet                = %s \n", radius_host_config);
+    log::printf("    Distance between moon and host planet    = %f \n", moon_host_D_config);
+    log::printf("    Radius of the host planet                = %f \n", radius_host_config);
 
 }
 
