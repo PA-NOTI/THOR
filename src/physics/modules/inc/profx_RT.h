@@ -1504,7 +1504,7 @@ __device__ void ts_short_char(int       id,
     
     if (surface == true) {
         surf_flux_d[id] = net_F_nvi_d[id * nlev + 0];
-        Tsurface_d[id] += surf_flux_d[id] * timestep / Csurf;
+        Tsurface_d[id] += surf_flux_d[id] * timestep / Csurf
                               + dTsurf_dt_d[id] * timestep; // put dTsurf here temporarily
 
          if (Tsurface_d[id] < 0) {
