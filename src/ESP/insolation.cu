@@ -363,9 +363,9 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         alpha_i               = alpha_i_config * M_PI / 180.0;
         obliquity             = obliquity_config * M_PI / 180.0;
         
-        moon_irr               = moon_irr_config;           // simulated moon irradiated by host planet
-        moon_host_D            = moon_host_D_config;        // distance between moon and host planet
-        radius_host            = radius_host_config;        // radius of the host planet
+        moon_irr              = moon_irr_config;           // simulated moon irradiated by host planet
+        moon_host_D           = moon_host_D_config;        // distance between moon and host planet
+        radius_host           = radius_host_config;        // radius of the host planet
 
         insol_avg = NO_INSOL_AVG;
         if (insol_avg_str == "NoInsolAvg") {
@@ -554,6 +554,12 @@ bool Insolation::store_init(storage& s) {
             s.append_value(obliquity * 180 / M_PI, "/obliquity", "deg", "tilt of spin axis");
         if (!s.has_table("/longp"))
             s.append_value(longp * 180 / M_PI, "/longp", "deg", "longitude of periastron");
+
+        if (!s.has_table("/moon_host_D"))
+            s.append_value(moon_host_D, "/moon_host_D", "m", "distance between moon and host planet");
+        if (!s.has_table("/moon_host_D"))
+            s.append_value(radius_host, "/radius_host", "m", "radius of the host planet");
+
     }
 
 
