@@ -370,8 +370,8 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         moon_host_D           = moon_host_D_config;        // distance between moon and host planet
         radius_host           = radius_host_config;        // radius of the host planet        
         ecc_host              = ecc_host_config;        
-        double ecc_host_anomaly_i  = true2ecc_anomaly(true_anomaly_i, ecc_host);        
-        mean_anomaly_host_i        = fmod(ecc_anomaly_i - ecc * sin(ecc_anomaly_i), (2 * M_PI));
+        double ecc_anomaly_host_i  = true2ecc_anomaly(true_anomaly_i, ecc_host);        
+        mean_anomaly_host_i        = fmod(ecc_anomaly_host_i  - ecc_host * sin(ecc_anomaly_host_i ), (2 * M_PI));
 
         insol_avg = NO_INSOL_AVG;
         if (insol_avg_str == "NoInsolAvg") {
@@ -605,7 +605,7 @@ bool Insolation::store(const ESP& esp, storage& s) {
 void Insolation::update_spin_orbit(double time, double Omega) {
 
     // Update the insolation related parameters for spin and orbit
-    double ecc_anomaly, true_long, ecc_host_anomaly;
+    double ecc_anomaly, true_long, ecc_anomaly_host;
     const double pi       = atan((double)(1)) * 4;
 
     mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
@@ -620,9 +620,9 @@ void Insolation::update_spin_orbit(double time, double Omega) {
     alpha = -Omega * time + true_long - true_long_i + alpha_i;
     //alpha    = -360.0*(Omega/(2.0*pi)) * time + true_long - true_long_i + alpha_i;
 
-    mean_host_anomaly = fmod((mean_motion_host * time + mean_anomaly_host_i), (2 * M_PI));
+    mean_anomaly_host = fmod((mean_motion_host * time + mean_anomaly_host_i), (2 * M_PI));
 
-    ecc_host_anomaly = fmod(solve_kepler(mean_anomaly_host, ecc_host), (2 * M_PI));
+    ecc_anomaly_host = fmod(solve_kepler(mean_anomaly_host, ecc_host), (2 * M_PI));
 
     r_orb_host     = calc_r_orb(ecc_anomaly_host, ecc_host);
 }

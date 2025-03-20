@@ -164,7 +164,8 @@ private:
     double mean_anomaly_host_i= 0;        // initial mean anomaly of host planet at start (rad)
     double mean_anomaly_host  = 0;        // current mean anomaly of host planet (rad)    
     double ecc_host           = 0;        // orbital eccentricity of host planet    
-    double ecc_config_host    = 0;        // orbital eccentricity of host planet
+    double ecc_host_config    = 0;        // orbital eccentricity of host planet    
+    double r_orb_host         = 1;        // orbital distance/semi-major axis
     
     double table_num_parmentier_config = 2; // if picket-fence, table number used to compute gamma (with/without Tio)
 
