@@ -113,6 +113,10 @@ public:
         return cos_zenith_angles_moon.get_host_data();
     }
 
+    double get_r_orb_host() {
+        return r_orb_host;
+    }
+
 private:
     bool enabled = false;
 
@@ -154,7 +158,13 @@ private:
     bool   moon_irr_mode      = false;    // simulated moon irradiated by host planet
     double moon_host_D        = 0;        // distance between moon and host planet
     double radius_host        = 0;        // radius of the host planet
-    double moon_irr           = 0;        //
+    double moon_irr           = 0;        //    
+    double mean_motion_host_config = 1.991e-7; // orbital mean motion of host planet (rad/s)    
+    double mean_motion_host   = 1.991e-7; // orbital mean motion of host planet (rad/s)    
+    double mean_anomaly_host_i= 0;        // initial mean anomaly of host planet at start (rad)
+    double mean_anomaly_host  = 0;        // current mean anomaly of host planet (rad)    
+    double ecc_host           = 0;        // orbital eccentricity of host planet    
+    double ecc_config_host    = 0;        // orbital eccentricity of host planet
     
     double table_num_parmentier_config = 2; // if picket-fence, table number used to compute gamma (with/without Tio)
 

@@ -289,7 +289,9 @@ bool Insolation::configure(config_file& config_reader) {
     
     config_reader.append_config_var("moon_irr_mode", moon_irr_config, moon_irr_config);
     config_reader.append_config_var("moon_host_D", moon_host_D_config, moon_host_D_config);
-    config_reader.append_config_var("radius_host", radius_host_config, radius_host_config);
+    config_reader.append_config_var("radius_host", radius_host_config, radius_host_config);    
+    config_reader.append_config_var("mean_motion_host", mean_motion_host_config, mean_motion_host_config);    
+    config_reader.append_config_var("ecc_host", ecc_host_config, ecc_host_config);
 
 
     config_reader.append_config_var("insol_avg", insol_avg_str, string(insol_avg_default));
@@ -351,7 +353,8 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             mean_motion = sim.Omega; //just set for the sync_rot, obl != 0 case
         }
         else {
-            mean_motion = mean_motion_config;
+            mean_motion = mean_motion_config;            
+            mean_motion_host = mean_motion_host_config;
         }
 
         true_long_i           = true_long_i_config * M_PI / 180.0;
@@ -365,7 +368,10 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         
         moon_irr              = moon_irr_config;           // simulated moon irradiated by host planet
         moon_host_D           = moon_host_D_config;        // distance between moon and host planet
-        radius_host           = radius_host_config;        // radius of the host planet
+        radius_host           = radius_host_config;        // radius of the host planet        
+        ecc_host              = ecc_host_config;        
+        double ecc_host_anomaly_i  = true2ecc_anomaly(true_anomaly_i, ecc_host);        
+        mean_anomaly_host_i        = fmod(ecc_anomaly_i - ecc * sin(ecc_anomaly_i), (2 * M_PI));
 
         insol_avg = NO_INSOL_AVG;
         if (insol_avg_str == "NoInsolAvg") {
@@ -599,7 +605,7 @@ bool Insolation::store(const ESP& esp, storage& s) {
 void Insolation::update_spin_orbit(double time, double Omega) {
 
     // Update the insolation related parameters for spin and orbit
-    double ecc_anomaly, true_long;
+    double ecc_anomaly, true_long, ecc_host_anomaly;
     const double pi       = atan((double)(1)) * 4;
 
     mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
@@ -613,4 +619,10 @@ void Insolation::update_spin_orbit(double time, double Omega) {
     cos_decl = sqrt(1.0 - sin_decl * sin_decl);
     alpha = -Omega * time + true_long - true_long_i + alpha_i;
     //alpha    = -360.0*(Omega/(2.0*pi)) * time + true_long - true_long_i + alpha_i;
+
+    mean_host_anomaly = fmod((mean_motion_host * time + mean_anomaly_host_i), (2 * M_PI));
+
+    ecc_host_anomaly = fmod(solve_kepler(mean_anomaly_host, ecc_host), (2 * M_PI));
+
+    r_orb_host     = calc_r_orb(ecc_anomaly_host, ecc_host);
 }

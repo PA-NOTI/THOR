@@ -20,6 +20,8 @@ import subprocess as spr
 import pyshtools as chairs
 import pdb
 
+import pandas
+
 import pathlib
 import psutil
 
@@ -118,8 +120,8 @@ class grid_new:
         else:
             raise IOError(fileh5 + ' not found!')
 
-        self.point_num = np.int(openh5['point_num'][0])
-        self.nv = np.int(openh5['nv'][0])
+        self.point_num = np.int64(openh5['point_num'][0])
+        self.nv = np.int64(openh5['nv'][0])
         self.nvi = self.nv + 1
         self.rotation = rotation
         self.theta_y = theta_y
@@ -221,7 +223,7 @@ class output_new:
         self.Vol0 = solid_ang[:, None] * rint[None, :]
 
         for t in np.arange(ntsi - 1, nts, stride):
-            fileh5 = resultsf + '/esp_output_' + simID + '_' + np.str(t + 1) + '.h5'
+            fileh5 = resultsf + '/esp_output_' + simID + '_' + np.array2string(t + 1) + '.h5'
             if os.path.exists(fileh5):
                 openh5 = h5py.File(fileh5, 'r+')
             else:
@@ -419,9 +421,9 @@ class rg_out_new:
                     pgrid_folder = resultsf + '/pgrid_%d_%d_1'%(ntsi,nts)
                 else:
                     pgrid_folder = resultsf + '/' + pgrid_ref[:-4]
-                fileh5 = pgrid_folder + '/regrid_' + simID + '_' + np.str(t + 1)
+                fileh5 = pgrid_folder + '/regrid_' + simID + '_' + np.array2string(t + 1)
             else:
-                fileh5 = resultsf + '/regrid_height_' + simID + '_' + np.str(t + 1)
+                fileh5 = resultsf + '/regrid_height_' + simID + '_' + np.array2string(t + 1)
             fileh5 += '.h5'
             if os.path.exists(fileh5):
                 openh5 = h5py.File(fileh5,'r+')
@@ -496,8 +498,8 @@ def define_Pgrid(resultsf, simID, ntsi, nts, stride, overwrite=False):
             openh5 = h5py.File(fileh5,'r')
         else:
             raise IOError(fileh5 + ' not found!')
-        nv = np.int(openh5['nv'][0])
-        point_num = np.int(openh5['point_num'][0])
+        nv = np.int32(openh5['nv'][0])
+        point_num = np.int32(openh5['point_num'][0])
         Altitude = openh5['Altitude'][...]
         Altitudeh = openh5['Altitudeh'][...]
         openh5.close()
@@ -519,11 +521,11 @@ def define_Pgrid(resultsf, simID, ntsi, nts, stride, overwrite=False):
         openh5.close()
 
         # now we'll loop over all the files to get the pressure_mean
-        num_out = np.int((nts - ntsi) / stride) + 1
+        num_out = np.int32((nts - ntsi) / stride) + 1
         pressure_mean = np.zeros((point_num, nv, num_out))
         for i in np.arange(num_out):
             t = ntsi + stride * i
-            fileh5 = resultsf + '/esp_output_' + simID + '_' + np.str(t) + '.h5'
+            fileh5 = resultsf + '/esp_output_' + simID + '_' + np.array2string(t) + '.h5'
             if os.path.exists(fileh5):
                 openh5 = h5py.File(fileh5,'r')
             else:
@@ -580,7 +582,7 @@ if has_pycuda:
                                     double *t, double *u, double *v) {
             // Simple code-up of Moller-Trumbore algorithm
             // Ref: [Fast, Minimum Storage Ray/Triangle Intersection.
-            //       Möller & Trumbore. Journal of Graphics Tools, 1997.]
+            //       MÃ¶ller & Trumbore. Journal of Graphics Tools, 1997.]
 
             double *OD = new double[3]();
             double *OA = new double[3]();
@@ -719,27 +721,56 @@ def create_rg_map(resultsf, simID, idx1, idx2, rotation=False, theta_z=0, theta_
                       (np.sin(lati)).ravel()]).T
 
     # arrays for nearest neighbors and weights
-    near3 = np.zeros((num_ll, 3), dtype=np.int32)
+    near3   = np.zeros((num_ll, 3), dtype=np.int32)
     weight3 = np.zeros((num_ll, 3))
+
     near = np.zeros(num_ll, dtype=np.int32)
 
     # cuda functions and sizes
     find_nearest = regrid_tools.get_function("find_nearest")
     calc_weights = regrid_tools.get_function("calc_weights")
-    gridGPU = (np.int(np.floor(num_ll / 256)) + 1, 1, 1)
+    gridGPU = (int(np.floor(num_ll / 256)) + 1, 1, 1)
     blockGPU = (256, 1, 1)
 
+
     # nearest neighbor search
-    find_nearest(cuda.Out(near), cuda.In(v_ll.ravel()), cuda.In(v_ico.ravel()),
-                 np.int32(num_ll), np.int32(grid.point_num),
-                 block=blockGPU, grid=gridGPU)
+    # __global__ void find_nearest(int *near, double *a, double *a_ico, int num_ll, int num_ico)
+
+    find_nearest(cuda.Out(near),
+                 #cuda.In(np.float32(v_ll.ravel())),
+                 #cuda.In(np.float32(v_ico.ravel())),
+                 cuda.In((v_ll.ravel())),
+                 cuda.In((v_ico.ravel())),
+                 np.int32(num_ll),
+                 np.int32(grid.point_num),
+                 block=blockGPU,
+                 grid=gridGPU
+                )
     near3[:, 0] = near
 
+    print("near")
+    print(near)
+
+
     # next 2 neighbors and weights from Moller-Trumbore algorithm
-    calc_weights(cuda.Out(weight3.ravel()), cuda.InOut(near3.ravel()),
-                 cuda.In(v_ll.ravel()), cuda.In(v_ico.ravel()),
-                 cuda.In(grid.pntloc.ravel()), np.int32(num_ll),
-                 np.int32(grid.point_num), block=blockGPU, grid=gridGPU)
+    # __global__ void calc_weights(double *weight3, int *near3, double *a, double *a_ico,
+    #                                 int *pntloc, int num_ll, int num_ico)
+    calc_weights(cuda.Out(weight3.ravel()),
+                 cuda.InOut(near3.ravel()),
+                 #cuda.In(np.float32(v_ll.ravel())),
+                 #cuda.In(np.float32(v_ico.ravel())),
+                 cuda.In(v_ll.ravel()),
+                 cuda.In(v_ico.ravel()),
+                 cuda.In(np.int32(grid.pntloc.ravel())),
+                 np.int32(num_ll),
+                 np.int32(grid.point_num),
+                 block=blockGPU,
+                 grid=gridGPU)
+    print("weight3")
+    print(weight3)
+    print("near3")
+    print(near3)
+
 
     # save into numpy zip file
     np.savez(resultsf + '/regrid_map.npz', lon=lon_range, lat=lat_range,
@@ -751,16 +782,32 @@ def vertical_regrid_field(source_array, nv, x, xnew):
     vert_lin_interp = regrid_tools.get_function("vert_lin_interp")
     x_non_mono_check = np.zeros(np.shape(source_array)[:-1], dtype=np.int32)
     xnew_non_mono_check = np.zeros(1, dtype=np.int32)
-    gridgpu = (np.int(np.floor(len(x_non_mono_check.ravel()) / 256)) + 1, 1, 1)
+    #gridgpu = (np.int32(np.floor(len(x_non_mono_check.ravel()) / 256)) + 1, 1, 1)
+    gridgpu = (int(np.floor(len(x_non_mono_check.ravel()) / 256)) + 1, 1, 1)
+
     blockgpu = (256, 1, 1)
 
     y = np.ascontiguousarray(source_array.ravel())
     ynew = np.zeros(np.shape(source_array)[:-1] + (len(xnew),))
-    vert_lin_interp(cuda.In(x), cuda.In(y), cuda.In(xnew),
-                    cuda.Out(ynew.ravel()), np.int32(len(xnew)),
-                    np.int32(len(x_non_mono_check.ravel())), np.int32(nv),
+    
+    #__global__ void vert_lin_interp(double *x, double *y, double *xnew,
+    #                                    double *ynew, int nxnew, int point_num, int nv,
+    #                                    int *x_non_mono_check, int *xnew_non_mono_check)
+    vert_lin_interp(cuda.In(x),
+                    cuda.In(y),
+                    cuda.In(xnew),
+                    cuda.Out(ynew.ravel()),
+                    #cuda.In(np.float32(x)),
+                    #cuda.In(np.float32(y)),
+                    #cuda.In(np.float32(xnew)),
+                    #cuda.Out(np.float32(ynew.ravel())),
+                    np.int32(len(xnew)),
+                    np.int32(len(x_non_mono_check.ravel())),
+                    np.int32(nv),
                     cuda.InOut(x_non_mono_check.ravel()),
-                    cuda.InOut(xnew_non_mono_check), grid=gridgpu, block=blockgpu)
+                    cuda.InOut(xnew_non_mono_check),
+                    grid=gridgpu,
+                    block=blockgpu)
     if (x_non_mono_check == 1).any():
         raise ValueError('Pressure interpolation failed! Pressure not monotonically decreasing with height')
     if (xnew_non_mono_check[0] == 1):
@@ -856,9 +903,9 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
         # check for existing h5 files
         proceed = 0
         skip_height_file = 0
-        fileh5p = pgrid_folder + '/regrid_' + simID + '_' + np.str(t)
+        fileh5p = pgrid_folder + '/regrid_' + simID + '_' + np.array2string(t)
 
-        fileh5h = resultsf + '/regrid_height_' + simID + '_' + np.str(t)
+        fileh5h = resultsf + '/regrid_height_' + simID + '_' + np.array2string(t)
         if rotation == True:  # tell the user they asked for a rotated grid
             print('Applied rotation (theta_z,theta_y) = (%f,%f) to grid\n'
                   % (theta_z * 180 / np.pi, theta_y * 180 / np.pi))
@@ -1004,6 +1051,8 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
                     tmp = np.sum(weight3[:,:,None] * source[key][near3], axis=1)
                     interm[key][:,:,:] =  tmp.reshape((d_lon[0],d_lon[1],np.shape(output.wavelength)[0]))
                 else:
+                    print(key)
+                    print(near3)
                     tmp = np.sum(weight3[:, :, None] * source[key][near3], axis=1)
                     try:
                         interm[key][:, :] = tmp.reshape((d_lon[0], d_lon[1], grid.nv))
@@ -1093,7 +1142,7 @@ def regrid(resultsf, simID, ntsi, nts, pgrid_ref='auto', overwrite=False, comp=4
 
 def KE_spect(input, grid, output, sigmaref, coord='icoh', lmax_adjust=0):
     tsp = output.nts - output.ntsi + 1
-    lmax_grid = np.int(np.floor(np.sqrt(grid.point_num)) / 2 - 1)
+    lmax_grid = np.int32(np.floor(np.sqrt(grid.point_num)) / 2 - 1)
 
     if coord == 'icoh':
         W = 0.5 * (output.Wh[:, 1:, :] + output.Wh[:, :-1, :])
@@ -1106,7 +1155,7 @@ def KE_spect(input, grid, output, sigmaref, coord='icoh', lmax_adjust=0):
         Vz = (output.Mh[2] + Wz)/output.Rho
 
         KE = 0.5 * (Vx**2 + Vy**2 + Vz**2) * output.Rho
-        lmax = np.int(lmax_grid + lmax_adjust)  # sets lmax based on grid size
+        lmax = np.int32(lmax_grid + lmax_adjust)  # sets lmax based on grid size
 
         x_coeffs = np.zeros((2, lmax + 1, lmax + 1, grid.nv, tsp), dtype=complex)
         y_coeffs = np.zeros((2, lmax + 1, lmax + 1, grid.nv, tsp), dtype=complex)
@@ -1312,10 +1361,10 @@ def vertical_lat(input, grid, output, rg, sigmaref, z, slice=['default'], save=T
 
     # Contour plot
     if len(clevs) == 1:
-        clevels = np.int(clevs[0])
+        clevels = np.int32(clevs[0])
     elif len(clevs) == 3:
         if isinstance(clevs[2],str) and 'log' in clevs[2]:
-            clevels = np.logspace(np.log10(np.float(clevs[0])),np.log10(np.float(clevs[1])),np.int(clevs[2][:-3]))
+            clevels = np.logspace(np.log10(np.float(clevs[0])),np.log10(np.float(clevs[1])),np.int32(clevs[2][:-3]))
         else:
             clevels = np.linspace(clevs[0],clevs[1],clevs[2])
     else:
@@ -1347,14 +1396,14 @@ def vertical_lat(input, grid, output, rg, sigmaref, z, slice=['default'], save=T
     print('min = %g, max = %g'%(np.nanmin(zvals),np.nanmax(zvals)))
 
     if wind_vectors == True:
-        vspacing = np.int(np.shape(rg.Latitude)[0] / 10)
+        vspacing = np.int32(np.shape(rg.Latitude)[0] / 10)
         if use_p:
-            wspacing = np.int(np.shape(rg.Pressure)[0] / 10)
+            wspacing = np.int32(np.shape(rg.Pressure)[0] / 10)
             Vlt = Vlt[:, prange[0]]
             Wlt = Wlt[:, prange[0]]
             yqcoord = rg.Pressure[::wspacing][prange[0]]
         else:
-            wspacing = np.int(np.shape(rg.Altitude)[0] / 10)
+            wspacing = np.int32(np.shape(rg.Altitude)[0] / 10)
             Vlt = Vlt[:, hrange[0]]
             Wlt = Wlt[:, hrange[0]]
             yqcoord = rg.Altitude[::wspacing][hrange[0]]
@@ -1563,9 +1612,9 @@ def vertical_lon(input, grid, output, rg, sigmaref, z, slice=['default'], save=T
 
     # Contour plot
     if len(clevs) == 1:
-        clevels = np.int(clevs[0])
+        clevels = np.int32(clevs[0])
     elif len(clevs) == 3:
-        clevels = np.linspace(np.int(clevs[0]), np.int(clevs[1]), np.int(clevs[2]))
+        clevels = np.linspace(np.int32(clevs[0]), np.int32(clevs[1]), np.int32(clevs[2]))
     else:
         raise IOError("clevs not valid!")
     # print(np.min(zvals),np.max(zvals))
@@ -1587,14 +1636,14 @@ def vertical_lon(input, grid, output, rg, sigmaref, z, slice=['default'], save=T
     C = ax.contourf(lonp * 180 / np.pi, ycoord, zvals, clevels, cmap=z['cmap'])
 
     if wind_vectors == True:
-        vspacing = np.int(np.shape(rg.Longitude)[0] / 10)
+        vspacing = np.int32(np.shape(rg.Longitude)[0] / 10)
         if use_p:
-            wspacing = np.int(np.shape(rg.Pressure)[0] / 10)
+            wspacing = np.int32(np.shape(rg.Pressure)[0] / 10)
             Ult = Ult[:, prange[0]]
             Wlt = Wlt[:, prange[0]]
             yqcoord = rg.Pressure[::wspacing, 0][prange[0]]
         else:
-            wspacing = np.int(np.shape(rg.Altitude)[0] / 10)
+            wspacing = np.int32(np.shape(rg.Altitude)[0] / 10)
             Ult = Ult[:, hrange[0]]
             Wlt = Wlt[:, hrange[0]]
             yqcoord = rg.Altitude[::wspacing][hrange[0]]
@@ -1780,9 +1829,9 @@ def horizontal_lev(input, grid, output, rg, Plev, z, save=True, axis=False,
     latp = rg.Latitude[:]
 
     if len(clevs) == 1:
-        clevels = np.int(clevs[0])
+        clevels = np.int32(clevs[0])
     elif len(clevs) == 3:
-        clevels = np.linspace(clevs[0], clevs[1], np.int(clevs[2]))
+        clevels = np.linspace(clevs[0], clevs[1], np.int32(clevs[2]))
     else:
         raise IOError("clevs not valid!")
     # clevels = np.linspace(900,1470,58)
@@ -1828,7 +1877,7 @@ def horizontal_lev(input, grid, output, rg, Plev, z, save=True, axis=False,
 
     if wind_vectors == True:
         d_z = np.shape(Uiii)
-        spacing = np.int(np.shape(Uiii)[0] / 10)
+        spacing = np.int32(np.shape(Uiii)[0] / 10)
         U = Uiii[::spacing, ::spacing].ravel()
         V = Viii[::spacing, ::spacing].ravel()
         lonq = loni[::spacing, ::spacing].ravel()
@@ -1936,7 +1985,7 @@ def streamf_moc_plot(input, grid, output, rg, sigmaref, save=True, axis=False,
 
     # Contour plot
     if len(clevs) == 1:
-        clevels = np.int(clevs[0])
+        clevels = np.int32(clevs[0])
         cscale = np.floor(np.log10(np.nanmax(np.abs(sf[:,prange[0]]))))
     elif len(clevs) == 3:
         cscale = np.floor(np.log10(np.nanmax(np.abs(clevs[:2]))))
@@ -1969,8 +2018,8 @@ def streamf_moc_plot(input, grid, output, rg, sigmaref, save=True, axis=False,
         cc.set_edgecolor("face")  # fixes a stupid bug in matplotlib 2.0
 
     if wind_vectors == True:
-        vspacing = np.int(np.shape(rg.Latitude)[0] / 10)
-        wspacing = np.int(np.shape(rg.Pressure)[0] / 10)
+        vspacing = np.int32(np.shape(rg.Latitude)[0] / 10)
+        wspacing = np.int32(np.shape(rg.Pressure)[0] / 10)
         Vlt = Vavglt[:, prange[0]]
         Wlt = Wavglt[:, prange[0]]
         Vq = Vlt[::vspacing, ::wspacing].ravel()
@@ -2112,8 +2161,8 @@ def profile(input, grid, output, z, stride=50, axis=None, save=True, use_p=True,
         #         col_lor.append('r')
         # else:
         #     ax.plot(z['value'][1995,:,0],grid.Altitude,'r--',zorder=111)
-        rp, = ax.plot(x[np.int(np.floor(grid.nv / 2))], y[np.int(np.floor(grid.nv / 2))] * unit, 'k+', ms=5, alpha=0.5)
-        gp, = ax.plot(x[np.int(np.floor(grid.nv * 0.75))], y[np.int(np.floor(grid.nv * 0.75))] * unit, 'k*', ms=5, alpha=0.5)
+        rp, = ax.plot(x[np.int32(np.floor(grid.nv / 2))], y[np.int32(np.floor(grid.nv / 2))] * unit, 'k+', ms=5, alpha=0.5)
+        gp, = ax.plot(x[np.int32(np.floor(grid.nv * 0.75))], y[np.int32(np.floor(grid.nv * 0.75))] * unit, 'k*', ms=5, alpha=0.5)
 
     if ylog:
         ax.set_yscale("log")
@@ -2664,7 +2713,7 @@ def streamf_walker_plot(input, grid, output, rg, sigmaref, save=True, axis=False
 
     # Contour plot
     if len(clevs) == 1:
-        clevels = np.int(clevs[0])
+        clevels = np.int32(clevs[0])
         cscale = np.floor(np.log10(np.nanmax(np.abs(sf[:,prange[0]]))))
     elif len(clevs) == 3:
         cscale = np.floor(np.log10(np.nanmax(np.abs(clevs[:2]))))
@@ -2695,8 +2744,8 @@ def streamf_walker_plot(input, grid, output, rg, sigmaref, save=True, axis=False
         cc.set_edgecolor("face")  # fixes a stupid bug in matplotlib 2.0
 
     if wind_vectors == True:
-        vspacing = np.int(np.shape(rg.Longitude)[0] / 10)
-        wspacing = np.int(np.shape(rg.Pressure)[0] / 10)
+        vspacing = np.int32(np.shape(rg.Longitude)[0] / 10)
+        wspacing = np.int32(np.shape(rg.Pressure)[0] / 10)
         Ult = Uavglt[:, prange[0]]
         Wlt = Wavglt[:, prange[0]]
         Uq = Ult[::vspacing, ::wspacing].ravel()

@@ -40,6 +40,7 @@ __global__ void annual_insol(double *insol_ann_d, double *insol_d, int nstep, in
 __device__ void radcsw(double *phtemp,
                        double  coszrs,
                        double  r_orb,
+                       double  r_orb_host,
                        double *dtemp,
                        double *tau_d,
                        double *fsw_up_d,
@@ -56,7 +57,8 @@ __device__ void radcsw(double *phtemp,
                        int     nv,
                        double *insol_d,
                        bool    DeepModel,
-                       bool    GravHeightVar) {
+                       bool    GravHeightVar,
+                       bool    moon_irr_config) {
 
     //  Calculate upward, downward, and net flux.
     //  Downward Directed Radiation
@@ -71,7 +73,13 @@ __device__ void radcsw(double *phtemp,
     else {
         tau = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
     }
-    insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
+    if (moon_irr_config){
+        insol_d[id]     = incflx * pow(r_orb_host, -2) * coszrs;
+    }
+    else {
+        insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
+    }
+    
     double flux_top = insol_d[id] * (1.0 - alb);
     double rup, rlow;
 
@@ -358,6 +366,7 @@ __global__ void rtm_dual_band(double *pressure_d,
                               int     nvi,
                               double  A,
                               double  r_orb,
+                              double  r_orb_host,
                               double *zenith_angles,
                               double *insol_d,
                               bool    surface,
@@ -519,7 +528,8 @@ __global__ void rtm_dual_band(double *pressure_d,
                    nv,
                    insol_d,
                    DeepModel,
-                   GravHeightVar);
+                   GravHeightVar,
+                   moon_irr_config);
         }
         else {
             insol_d[id] = 0;
@@ -1530,6 +1540,7 @@ __global__ void rtm_picket_fence(double *pressure_d,
                                  double *Altitude_d,
                                  double *Altitudeh_d,
                                  double  r_rob,
+                                 double  r_orb_host,
                                  double  radius_star,
                                  double *dtemp,
                                  double  timestep,

@@ -7,19 +7,22 @@ config_version = 1
 
 #-- Time stepping and output options -----------------------------------------#
 # number of steps
-num_steps = 172800 #43200 #144006 #144000 #145008 #144144 #144000 #144 #207552 # 207360 1'200d       #216000
+num_steps = 2448
+#172800 #43200 #144006 #144000 #145008 #144144 #144000 #144 #207552 # 207360 1'200d       #216000
 
 # length of timesteps in seconds
 timestep = 600
 
 # output
 # output every n steps
-n_out = 432000 #43200 #144000 #6 #17280 #3456                      #21600
+n_out = 144
+#432000 #43200 #144000 #6 #17280 #3456                      #21600
 
 # write to log file at a different cadence from n_out
 custom_log_n_out = false
 # how often to write to log file (if above = true)
-log_n_out = 432000 #43200 #144000 #6 #1728 #1000                  #2160
+log_n_out = 144
+#432000 #43200 #144000 #6 #1728 #1000                  #2160
 
 # output directory (relative to current working directory)
 # defaults to 'results'
@@ -98,6 +101,9 @@ DeepModel = true
 
 # Initial conditions
 rest = true
+
+# varying gravity with height
+GravHeightVar = true
 
 # initial conditions file, used if rest is set to false
 # (path relative to current working directory)
@@ -275,7 +281,7 @@ rt1Dmode = false
 sync_rot = false
 
 # mean motion of orbit (if sync_rot=false and ecc>0) (rad/s)
-mean_motion = 2.181361605599506e-6 #7.27e-5 #3.635e-5 #2*Omega #9.0875e-5 #1.25*Omega  #2.908e-4 4*Omega #1.454e-4 2*Omega #1.0905e-4 #1.5*7.27e-5 #1.98e-7
+mean_motion = 1.9821231065133954e-06 #2.181361605599506e-6 #7.27e-5 #3.635e-5 #2*Omega #9.0875e-5 #1.25*Omega  #2.908e-4 4*Omega #1.454e-4 2*Omega #1.0905e-4 #1.5*7.27e-5 #1.98e-7
 
 # initial substellar longitude (deg)
 alpha_i = 90
@@ -302,6 +308,12 @@ moon_host_D = 671100000.0 #1.496e+11
 
 # radius of the host planet (m)
 radius_host = 142984000.0 #6.96342e8
+
+# mean motion of host's orbit (if moon_irr_mode=true ) (rad/s)
+mean_motion_host = 1.9923849908611068e-07
+
+# eccentricity of host's orbit
+ecc_host = 0.01671
 
 #########################################################
 
