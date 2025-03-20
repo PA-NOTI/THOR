@@ -866,7 +866,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
         double Tirr;
         double F0_h;
         
-        double F_fromHost;
+        double F_fromHost = 0.0;
         double Thost;
         double Teq_Host;
         // double const sb = 5.670374419e-8;
@@ -881,6 +881,12 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
         dim3 NBRT((esp.point_num / NTH) + 1, 1, 1);
         
         
+        cudaStatus = cudaMemcpy(
+            moon_host_angles_d, moon_host_angles_h, esp.point_num * sizeof(double), cudaMemcpyHostToDevice);
+        if (cudaStatus != cudaSuccess) {
+            fprintf(stderr, "moon_host_angles_d cudaMemcpyHostToDevice failed!");
+        //goto Error;
+        }
         
         if (moon_irr_mode) {        
             for (int c = 0; c < esp.point_num; c++) {                
@@ -888,17 +894,12 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                 cuda_check_status_or_exit(__FILE__, __LINE__);
                 
                 moon_host_angles_h[c] = esp.insolation.get_host_cos_zenith_angles_moon()[c];
-                cudaStatus = cudaMemcpy(
-                    moon_host_angles_d, moon_host_angles_h, esp.point_num * sizeof(double), cudaMemcpyHostToDevice);
-                if (cudaStatus != cudaSuccess) {
-                    fprintf(stderr, "moon_host_angles_d cudaMemcpyHostToDevice failed!");
-                //goto Error;
-                }
+                
              }
-             F_fromHost = 0.0;
-             Teq_Host = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
-             Thost = Teq_Host * pow((radius_host) / (moon_host_D), 0.5);
-             F_fromHost = SIGMA_SB_th * pow(Thost, 4.0);
+            F_fromHost = 0.0;
+            Teq_Host = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
+            Thost = Teq_Host * pow((radius_host) / (moon_host_D), 0.5);
+            F_fromHost = SIGMA_SB_th * pow(Thost, 4.0);
         }
         
 
