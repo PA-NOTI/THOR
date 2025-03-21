@@ -290,7 +290,7 @@ alpha_i = 90
 true_long_i = 0
 
 # eccentricity of orbit
-ecc =  0.1116649  #0.15718256803919456 #0.0944 #0.01671
+ecc =  0.0 #0.1116649  #0.15718256803919456 #0.0944 #0.01671
 
 # obliquity (axial-tilt) (deg)
 obliquity = 66.0
