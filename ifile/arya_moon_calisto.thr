@@ -222,7 +222,7 @@ Tstar = 5777.279
 #tuned to give solar constant at 1 au
 
 # orbital distance or semi-major axis (au)
-planet_star_dist = 1.00014
+planet_star_dist = 1.0 #1.00014
 
 # radius of host star (R_sun)
 radius_star = 1.0
@@ -313,7 +313,7 @@ radius_host = 142984000.0 #6.96342e8
 mean_motion_host = 1.9923849908611068e-07
 
 # eccentricity of host's orbit
-ecc_host = 0.01671
+ecc_host = 0.0 #0.01671
 
 #########################################################
 
