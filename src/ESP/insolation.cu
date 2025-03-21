@@ -404,7 +404,13 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         const int num_blocks = 256;
         if (insol_avg == DIURNAL_AVG) {
             if (sim.Omega != mean_motion) {
-                Pday = 2 * M_PI / (sim.Omega - mean_motion); //what do i do in case of Omega < 0 ??
+                if (moon_irr) {
+                    Pday = 2 * M_PI / (sim.Omega - mean_motion_host); //what do i do in case of Omega < 0 ??
+                }
+                else {
+                    Pday = 2 * M_PI / (sim.Omega - mean_motion); //what do i do in case of Omega < 0 ??
+                }
+                
             }
             else {
                 printf("Rotation and orbital periods cannot be equal with diurnal avg forcing\n");
@@ -620,9 +626,12 @@ void Insolation::update_spin_orbit(double time, double Omega) {
     alpha = -Omega * time + true_long - true_long_i + alpha_i;
     //alpha    = -360.0*(Omega/(2.0*pi)) * time + true_long - true_long_i + alpha_i;
 
-    mean_anomaly_host = fmod((mean_motion_host * time + mean_anomaly_host_i), (2 * M_PI));
+    if (moon_irr) {
 
-    ecc_anomaly_host = fmod(solve_kepler(mean_anomaly_host, ecc_host), (2 * M_PI));
+        mean_anomaly_host = fmod((mean_motion_host * time + mean_anomaly_host_i), (2 * M_PI));
 
-    r_orb_host     = calc_r_orb(ecc_anomaly_host, ecc_host);
+        ecc_anomaly_host = fmod(solve_kepler(mean_anomaly_host, ecc_host), (2 * M_PI));
+
+        r_orb_host     = calc_r_orb(ecc_anomaly_host, ecc_host);
+    }
 }
