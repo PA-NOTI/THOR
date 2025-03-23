@@ -48,7 +48,7 @@ simulation_ID = Aya
 radius = 6371000.0 #3121600 #6371000.0
 
 # Rotation rate [rad s^-1]
-rotation_rate = 4.362723211199012e-6 #1.454e-4 #7.27e-5  # 7.292E-5 
+rotation_rate = 7.292E-5 #4.362723211199012e-6 #1.454e-4 #7.27e-5  # 7.292E-5 
 
 # Gravitational acceleration [m/s^2]
 gravitation = 9.8
@@ -218,7 +218,7 @@ radiative_transfer = true
 rt_type = DualbandGray
 
 # stellar temperature (k)
-Tstar = 5772
+Tstar = 5777.279
 #tuned to give solar constant at 1 au
 
 # orbital distance or semi-major axis (au)
@@ -301,7 +301,7 @@ longp = 0
 
 ####################################################
 # Mode simulated moon irradiated by host planet
-moon_irr_mode = false 
+moon_irr_mode = true 
 
 # distance between moon and host planet (m)
 moon_host_D = 671100000.0 #1.496e+11
