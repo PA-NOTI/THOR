@@ -60,7 +60,7 @@ Rd = 287.0
 Cp = 1005.0
 
 # Mean atmospheric temperature [K]
-Tmean = 280.0
+Tmean = 300.0
 
 # Reference surface pressure [Pa] (pressure at bottom of model)
 P_ref = 100000.0
@@ -218,7 +218,7 @@ radiative_transfer = true
 rt_type = DualbandGray
 
 # stellar temperature (k)
-Tstar = 5777.279
+Tstar = 5772
 #tuned to give solar constant at 1 au
 
 # orbital distance or semi-major axis (au)
