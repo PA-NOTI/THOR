@@ -301,7 +301,7 @@ longp = 0
 
 ####################################################
 # Mode simulated moon irradiated by host planet
-moon_irr_mode = true
+moon_irr_mode = false 
 
 # distance between moon and host planet (m)
 moon_host_D = 671100000.0 #1.496e+11
