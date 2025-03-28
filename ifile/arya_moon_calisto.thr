@@ -103,7 +103,7 @@ DeepModel = true
 rest = true
 
 # varying gravity with height
-#GravHeightVar = false
+GravHeightVar = true
 
 # initial conditions file, used if rest is set to false
 # (path relative to current working directory)
@@ -290,7 +290,7 @@ alpha_i = 90
 true_long_i = 0
 
 # eccentricity of orbit
-ecc =  0.0 #0.1116649  #0.15718256803919456 #0.0944 #0.01671
+ecc =  0.1116649  #0.15718256803919456 #0.0944 #0.01671
 
 # obliquity (axial-tilt) (deg)
 obliquity = 66.0
@@ -313,7 +313,7 @@ radius_host = 142984000.0 #6.96342e8
 mean_motion_host = 1.9923849908611068e-07
 
 # eccentricity of host's orbit
-ecc_host = 0.0 #0.01671
+ecc_host = 0.01671
 
 #########################################################
 
