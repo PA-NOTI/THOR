@@ -1198,7 +1198,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                          sim.DeepModel,
                                          sim.GravHeightVar,
                                          moon_irr_mode,
-                                         moon_host_angles_d);
+                                         esp.insolation.get_host_cos_zenith_angles_moon());
         }
 
 
