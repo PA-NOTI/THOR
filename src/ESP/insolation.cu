@@ -341,7 +341,8 @@ void Insolation::print_config() {
     log::printf("    Use averaged insolation     = %s \n", insol_avg_str.c_str());
     log::printf("    Simulated moon irradiated by host planet = %s.\n", moon_irr_config ? "true" : "false");
     log::printf("    Distance between moon and host planet    = %f \n", moon_host_D_config);
-    log::printf("    Radius of the host planet                = %f \n", radius_host_config);
+    log::printf("    Radius of the host planet                = %f \n", radius_host_config);    
+    log::printf("    Orbital mean motion of the host         = %f rad/s.\n", mean_motion_host_config);
 
 }
 
@@ -422,8 +423,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
                 }
                 else {
                     Porb       = 2 * M_PI / mean_motion; //what do i do in case of Omega < 0 ??
-                }
-                
+                }                
                 n_days_orb = int(Porb / Pday); //hmm what to do with remaining fraction of day??
                 cos_zenith_daily.allocate(n_days_orb * esp.point_num);
                 cos_zenith_daily.zero();
@@ -575,7 +575,7 @@ bool Insolation::store_init(storage& s) {
 
         if (!s.has_table("/moon_host_D"))
             s.append_value(moon_host_D, "/moon_host_D", "m", "distance between moon and host planet");
-        if (!s.has_table("/moon_host_D"))
+        if (!s.has_table("/radius_host"))
             s.append_value(radius_host, "/radius_host", "m", "radius of the host planet");
 
     }
