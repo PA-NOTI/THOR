@@ -7,7 +7,7 @@ config_version = 1
 
 #-- Time stepping and output options -----------------------------------------#
 # number of steps
-num_steps = 4896
+num_steps = 2160
 #172800 #43200 #144006 #144000 #145008 #144144 #144000 #144 #207552 # 207360 1'200d       #216000
 
 # length of timesteps in seconds
@@ -15,18 +15,18 @@ timestep = 600
 
 # output
 # output every n steps
-n_out = 144
+n_out = 90
 #432000 #43200 #144000 #6 #17280 #3456                      #21600
 
 # write to log file at a different cadence from n_out
 custom_log_n_out = false
 # how often to write to log file (if above = true)
-log_n_out = 144
+log_n_out = 90
 #432000 #43200 #144000 #6 #1728 #1000                  #2160
 
 # output directory (relative to current working directory)
 # defaults to 'results'
-results_path = Kepler1661slow
+results_path = Kepler1661slowerbetter
 
 # output global diagnostics (energy, mass, momentum, entropy)
 globdiag = true
@@ -68,7 +68,7 @@ P_ref = 100000.0
 
 #-- Grid options -------------------------------------------------------------#
 # Altitude of the top of the model domain [m]
-Top_altitude = 20000.0 #36000.0 #36000.0
+Top_altitude = 33000.0 #30000.0 #20000.0 #36000.0 #36000.0
 
 # Horizontal resolution level.
 glevel = 5

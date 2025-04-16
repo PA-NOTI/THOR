@@ -416,8 +416,14 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
                 printf("Rotation and orbital periods cannot be equal with diurnal avg forcing\n");
                 config_OK &= false;
             }
-            if (config_OK) {
-                Porb       = 2 * M_PI / mean_motion;
+            if (config_OK) {                
+                if (moon_irr) {
+                    Porb       = 2 * M_PI / mean_motion_host; //what do i do in case of Omega < 0 ??
+                }
+                else {
+                    Porb       = 2 * M_PI / mean_motion; //what do i do in case of Omega < 0 ??
+                }
+                
                 n_days_orb = int(Porb / Pday); //hmm what to do with remaining fraction of day??
                 cos_zenith_daily.allocate(n_days_orb * esp.point_num);
                 cos_zenith_daily.zero();
@@ -586,6 +592,13 @@ bool Insolation::store(const ESP& esp, storage& s) {
                        "/cos_zenith_angles",
                        "-",
                        "cos_zenith_angles per column");
+        
+        std::shared_ptr<double[]> cos_zenith_angles_moon_h = cos_zenith_angles_moon.get_host_data();
+        s.append_table(cos_zenith_angles_moon_h.get(),
+                        cos_zenith_angles_moon.get_size(),
+                       "/cos_zenith_angles_moon",
+                       "-",
+                       "cos_zenith_angles_moon per column");
 
         if (insol_avg == DIURNAL_AVG) {
             std::shared_ptr<double[]> cos_zenith_daily_h = cos_zenith_daily.get_host_data();

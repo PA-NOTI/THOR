@@ -869,6 +869,8 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
         double F_fromHost = 0.0;
         double Thost;
         double Teq_Host;
+
+        double test_angles = 0.0;
         // double const sb = 5.670374419e-8;
         //
         //  Number of threads per block.
@@ -894,12 +896,20 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                 cuda_check_status_or_exit(__FILE__, __LINE__);
                 
                 moon_host_angles_h[c] = esp.insolation.get_host_cos_zenith_angles_moon()[c];
+
+                test_angles = moon_host_angles_h[c]
                 
-             }
+            }
+            if (test_angles== 0.0) {
+                fprintf("all moon_host_angles_h are zero");
+            }
             F_fromHost = 0.0;
             Teq_Host = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
             Thost = Teq_Host * pow((radius_host) / (moon_host_D), 0.5);
             F_fromHost = SIGMA_SB_th * pow(Thost, 4.0);
+            if (F_fromHost== 0.0) {
+                fprintf("F_fromHost is zero");
+            }
         }
         
 
@@ -1121,7 +1131,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                             rt1Dmode,
                                             sim.DeepModel,
                                             moon_irr_mode,
-                                            moon_host_angles_d);
+                                            esp.insolation.get_device_cos_zenith_angles_moon());
             cudaDeviceSynchronize();
             cuda_check_status_or_exit(__FILE__, __LINE__);
             //printf("lw_net__df_e[%d] = %e K\n", 0, lw_net__df_e[0]);            
@@ -1234,8 +1244,7 @@ bool radiative_transfer::configure(config_file &config_reader) {
     config_reader.append_config_var("moon_host_D", moon_host_D_config, moon_host_D_config);
     config_reader.append_config_var("radius_host", radius_host_config, radius_host_config);
     config_reader.append_config_var("PF_mode", PF_mode_config, PF_mode_config);
-    config_reader.append_config_var(
-            "table_num_parmentier", table_num_parmentier_config, table_num_parmentier_config);
+    config_reader.append_config_var("table_num_parmentier", table_num_parmentier_config, table_num_parmentier_config);
     
 
 
