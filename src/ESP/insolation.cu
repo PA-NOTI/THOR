@@ -357,6 +357,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             mean_motion = mean_motion_config;            
             mean_motion_host = mean_motion_host_config;
         }
+        planetary_Omega = sim.Omega
 
         true_long_i           = true_long_i_config * M_PI / 180.0;
         longp                 = longp_config * M_PI / 180.0;
@@ -628,7 +629,7 @@ void Insolation::update_spin_orbit(double time, double Omega) {
     const double pi       = atan((double)(1)) * 4;
 
     if (moon_irr) {
-        mean_anomaly = fmod((((sim.Omega - mean_motion_host)/2.0) * time + mean_anomaly_i), (2 * M_PI));
+        mean_anomaly = fmod((  ((planetary_Omega - mean_motion_host)/2.0) * time + mean_anomaly_i), (2 * M_PI));
     }
     else {
         mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
