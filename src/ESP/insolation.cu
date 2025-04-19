@@ -357,7 +357,6 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             mean_motion = mean_motion_config;            
             mean_motion_host = mean_motion_host_config;
         }
-        planetary_Omega = sim.Omega;
 
         true_long_i           = true_long_i_config * M_PI / 180.0;
         longp                 = longp_config * M_PI / 180.0;
