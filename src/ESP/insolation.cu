@@ -627,7 +627,14 @@ void Insolation::update_spin_orbit(double time, double Omega) {
     double ecc_anomaly, true_long, ecc_anomaly_host;
     const double pi       = atan((double)(1)) * 4;
 
-    mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
+    if (moon_irr) {
+        mean_anomaly = fmod((((sim.Omega - mean_motion_host)/2.0) * time + mean_anomaly_i), (2 * M_PI));
+    }
+    else {
+        mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
+    } 
+
+    
 
     ecc_anomaly = fmod(solve_kepler(mean_anomaly, ecc), (2 * M_PI));
 
