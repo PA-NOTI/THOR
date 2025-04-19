@@ -15,13 +15,13 @@ timestep = 600
 
 # output
 # output every n steps
-n_out = 90
+n_out = 15 #90
 #432000 #43200 #144000 #6 #17280 #3456                      #21600
 
 # write to log file at a different cadence from n_out
 custom_log_n_out = false
 # how often to write to log file (if above = true)
-log_n_out = 90
+log_n_out = 15 #90
 #432000 #43200 #144000 #6 #1728 #1000                  #2160
 
 # output directory (relative to current working directory)
@@ -290,7 +290,7 @@ alpha_i = 90
 true_long_i = 0
 
 # eccentricity of orbit
-ecc =  0.1116649  #0.15718256803919456 #0.0944 #0.01671
+ecc =  0.0 #0.1116649  #0.15718256803919456 #0.0944 #0.01671
 
 # obliquity (axial-tilt) (deg)
 obliquity = 66.0

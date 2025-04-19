@@ -407,7 +407,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             if (sim.Omega != mean_motion) {
                 if (moon_irr) {
                     //Pday = 2 * M_PI / (sim.Omega - mean_motion_host); //what do i do in case of Omega < 0 ??
-                    Pday = 2 * M_PI / (sim.Omega); //what do i do in case of Omega < 0 ??
+                    Pday = 2 * M_PI / (2.0*sim.Omega); //what do i do in case of Omega < 0 ??
                 }
                 else {
                     Pday = 2 * M_PI / (sim.Omega - mean_motion); //what do i do in case of Omega < 0 ??
@@ -420,7 +420,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             }
             if (config_OK) {                
                 if (moon_irr) {
-                    Porb       = 2.0 * M_PI / ((sim.Omega + mean_motion_host)/1.0); //what do i do in case of Omega < 0 ??
+                    Porb       = 2.0 * M_PI / ((sim.Omega)/1.0); //what do i do in case of Omega < 0 ??
                     //Porb       = 2.0 * M_PI / ((sim.Omega)/1.0); //what do i do in case of Omega < 0 ??
                     //n_days_orb = int(1); //hmm what to do with remaining fraction of day??
                     n_days_orb = int(Porb / Pday); //hmm what to do with remaining fraction of day??
@@ -633,7 +633,7 @@ void Insolation::update_spin_orbit(double time, double Omega) {
     const double pi       = atan((double)(1)) * 4;
 
     if (moon_irr) {
-        mean_anomaly = fmod((  ((Omega)/1.0) * time + mean_anomaly_i), (2 * M_PI));
+        mean_anomaly = fmod((  ((2.0*Omega)/1.0) * time + mean_anomaly_i), (2 * M_PI));
     }
     else {
         mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
