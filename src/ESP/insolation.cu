@@ -419,7 +419,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             }
             if (config_OK) {                
                 if (moon_irr) {
-                    Porb       = 2 * M_PI / mean_motion_host; //what do i do in case of Omega < 0 ??
+                    Porb       = 2 * M_PI / (sim.Omega - mean_motion_host); //what do i do in case of Omega < 0 ??
                 }
                 else {
                     Porb       = 2 * M_PI / mean_motion; //what do i do in case of Omega < 0 ??
