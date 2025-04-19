@@ -166,7 +166,6 @@ private:
     double ecc_host           = 0;        // orbital eccentricity of host planet    
     double ecc_host_config    = 0;        // orbital eccentricity of host planet    
     double r_orb_host         = 1;        // orbital distance/semi-major axis
-    double planetary_Omega = 0;
     
     double table_num_parmentier_config = 2; // if picket-fence, table number used to compute gamma (with/without Tio)
 
