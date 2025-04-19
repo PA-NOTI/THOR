@@ -420,7 +420,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             }
             if (config_OK) {                
                 if (moon_irr) {
-                    Porb       = 2.0 * M_PI / ((sim.Omega - mean_motion_host)/1.0); //what do i do in case of Omega < 0 ??
+                    Porb       = 2.0 * M_PI / ((sim.Omega - mean_motion_host)/4.0); //what do i do in case of Omega < 0 ??
                 }
                 else {
                     Porb       = 2 * M_PI / mean_motion; //what do i do in case of Omega < 0 ??
@@ -629,7 +629,7 @@ void Insolation::update_spin_orbit(double time, double Omega) {
     const double pi       = atan((double)(1)) * 4;
 
     if (moon_irr) {
-        mean_anomaly = fmod((  ((planetary_Omega - mean_motion_host)/1.0) * time + mean_anomaly_i), (2 * M_PI));
+        mean_anomaly = fmod((  ((planetary_Omega - mean_motion_host)/4.0) * time + mean_anomaly_i), (2 * M_PI));
     }
     else {
         mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
