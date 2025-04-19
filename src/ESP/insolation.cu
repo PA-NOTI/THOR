@@ -420,9 +420,10 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             }
             if (config_OK) {                
                 if (moon_irr) {
-                    //Porb       = 2.0 * M_PI / ((sim.Omega - mean_motion_host)/1.0); //what do i do in case of Omega < 0 ??
-                    Porb       = 2.0 * M_PI / ((sim.Omega)/1.0); //what do i do in case of Omega < 0 ??
-                    n_days_orb = int(1); //hmm what to do with remaining fraction of day??
+                    Porb       = 2.0 * M_PI / ((sim.Omega + mean_motion_host)/1.0); //what do i do in case of Omega < 0 ??
+                    //Porb       = 2.0 * M_PI / ((sim.Omega)/1.0); //what do i do in case of Omega < 0 ??
+                    //n_days_orb = int(1); //hmm what to do with remaining fraction of day??
+                    n_days_orb = int(Porb / Pday); //hmm what to do with remaining fraction of day??
                 }
                 else {
                     Porb       = 2 * M_PI / mean_motion; //what do i do in case of Omega < 0 ??
