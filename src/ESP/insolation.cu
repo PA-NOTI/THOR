@@ -444,7 +444,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
 
                     for (int istep = 0; istep <= n_day_steps; istep++) {
                         //trapezoidal rule here
-                        update_spin_orbit(day_start_time_h[iday] + istep * dtstep, sim.Omega);
+                        update_spin_orbit(day_start_time_h[iday] + istep * dtstep, sim.Omega, sim.moon_irr_mode);
 
                         compute_cos_zenith_angles<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
                             *cos_zenith_angles,
@@ -488,7 +488,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
                     //        mean_anomaly);
                 }
                 //reset orbit to original position
-                update_spin_orbit(0.0, sim.Omega);
+                update_spin_orbit(0.0, sim.Omega, sim.moon_irr_mode);
 
                 day_start_time.put();
             }

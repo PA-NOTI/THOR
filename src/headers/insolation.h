@@ -175,5 +175,5 @@ private:
     cuda_device_memory<double> cos_zenith_angles;
     cuda_device_memory<double> cos_zenith_angles_moon;
 
-    void update_spin_orbit(double time, double Omega);
+    void update_spin_orbit(double time, double Omega, bool moon_irr_mode);
 };
