@@ -48,7 +48,7 @@ simulation_ID = Aya
 radius = 6371000.0 #3121600 #6371000.0
 
 # Rotation rate [rad s^-1]
-rotation_rate = 4.8721220112600084e-6 
+rotation_rate = 5.287439270919805e-06 #4.8721220112600084e-6 
 
 # Gravitational acceleration [m/s^2]
 gravitation = 12
@@ -281,7 +281,8 @@ rt1Dmode = false
 sync_rot = false
 
 # mean motion of orbit (if sync_rot=false and ecc>0) (rad/s)
-mean_motion = 4.456567427451835e-6
+mean_motion = 5.287439270919805e-06 #4.8721220112600084e-6 4.456567427451835e-6
+# rotation_rate = 5.287439270919805e-06
 
 # initial substellar longitude (deg)
 alpha_i = 90
