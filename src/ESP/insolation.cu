@@ -648,7 +648,13 @@ void Insolation::update_spin_orbit(double time, double Omega) {
 
     sin_decl = sin(obliquity) * sin(true_long);
     cos_decl = sqrt(1.0 - sin_decl * sin_decl);
-    alpha = -Omega * time + true_long - true_long_i + alpha_i;
+    if (moon_irr) {
+        alpha = -2.0*Omega * time + true_long - true_long_i + alpha_i;
+    }
+    else {
+        alpha = -Omega * time + true_long - true_long_i + alpha_i;
+    } 
+    
     //alpha    = -360.0*(Omega/(2.0*pi)) * time + true_long - true_long_i + alpha_i;
 
     if (moon_irr) {
