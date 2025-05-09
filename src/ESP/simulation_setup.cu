@@ -90,4 +90,6 @@ SimulationSetup::SimulationSetup() {
     globdiag = false;
 
     rest = true;
+
+    moon_irr_mode = false;
 }

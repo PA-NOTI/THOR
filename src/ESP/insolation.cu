@@ -518,11 +518,11 @@ bool Insolation::phy_loop(ESP&                   esp,
         //  update global insolation properties if necessary
         if (sync_rot) {
             if (ecc > 1e-10) {
-                update_spin_orbit(nstep * time_step, sim.Omega);
+                update_spin_orbit(nstep * time_step, sim.Omega, sim.moon_irr_mode);
             }
         }
         else {
-            update_spin_orbit(nstep * time_step, sim.Omega);
+            update_spin_orbit(nstep * time_step, sim.Omega, sim.moon_irr_mode);
         }
         
 
@@ -626,14 +626,14 @@ bool Insolation::store(const ESP& esp, storage& s) {
 }
 
 
-void Insolation::update_spin_orbit(double time, double Omega) {
+void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode) {
 
     // Update the insolation related parameters for spin and orbit
     double ecc_anomaly, true_long, ecc_anomaly_host;
     const double pi       = atan((double)(1)) * 4;
 
-    if (moon_irr) {
-        mean_anomaly = fmod((  ((2.0*Omega)/1.0) * time + mean_anomaly_i), (2 * M_PI));
+    if (moon_irr_mode) {
+        mean_anomaly = fmod((  ((2.0*Omega)) * time + mean_anomaly_i), (2 * M_PI));
     }
     else {
         mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
@@ -648,7 +648,7 @@ void Insolation::update_spin_orbit(double time, double Omega) {
 
     sin_decl = sin(obliquity) * sin(true_long);
     cos_decl = sqrt(1.0 - sin_decl * sin_decl);
-    if (moon_irr) {
+    if (moon_irr_mode) {
         alpha = -2.0*Omega * time + true_long - true_long_i + alpha_i;
     }
     else {
@@ -657,7 +657,7 @@ void Insolation::update_spin_orbit(double time, double Omega) {
     
     //alpha    = -360.0*(Omega/(2.0*pi)) * time + true_long - true_long_i + alpha_i;
 
-    if (moon_irr) {
+    if (moon_irr_mode) {
 
         mean_anomaly_host = fmod((mean_motion_host * time + mean_anomaly_host_i), (2 * M_PI));
 

@@ -472,6 +472,9 @@ int main(int argc, char** argv) {
     double Csurf_config = 1e7; // heat capacity of surface (J K^-1 m^-2)
     config_reader.append_config_var("Csurf", Csurf_config, Csurf_config);
 
+    
+    config_reader.append_config_var("moon_irr_mode", sim.moon_irr_mode, sim.moon_irr_mode);
+
 
     //*****************************************************************
     // set configs for modules
@@ -674,6 +677,18 @@ int main(int argc, char** argv) {
     }
     else {
         log::printf("init_PT_profile config item not recognised: [%s]\n",
+                    init_PT_profile_str.c_str());
+        config_OK &= false;
+    }
+
+    if (sim.moon_irr_mode == true) {
+        config_OK &= true;
+    }
+    else if (sim.moon_irr_mode == false) {
+        config_OK &= true;
+    }
+    else {
+        log::printf("sim.moon_irr_mode config item not recognised: [%s]\n",
                     init_PT_profile_str.c_str());
         config_OK &= false;
     }
@@ -1216,6 +1231,8 @@ int main(int argc, char** argv) {
     log::printf("   Deep Model       =  %s.\n", sim.DeepModel ? "true" : "false");
     log::printf("   Convective adj.  =  %s.\n", sim.conv_adj ? "true" : "false");
     log::printf("   Conv adj type    =  %s.\n", conv_adj_type_str.c_str());
+    
+    log::printf("   moon_irr_mode    = %s \n", sim.moon_irr_mode ? "true" : "false");
 
     log::printf("   ********** \n");
     log::printf("   Numerical diffusion\n");
