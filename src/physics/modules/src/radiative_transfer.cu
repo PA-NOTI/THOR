@@ -890,7 +890,8 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
         //goto Error;
         }
         
-        if (moon_irr_mode) {        
+        if (moon_irr_mode) {   
+            /*    
             for (int c = 0; c < esp.point_num; c++) {                
                 cudaDeviceSynchronize();
                 cuda_check_status_or_exit(__FILE__, __LINE__);
@@ -903,6 +904,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             if (test_angles== 0.0) {
                 printf("all moon_host_angles_h are zero");
             }
+            */
             F_fromHost = 0.0;
             Teq_Host = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
             Thost = Teq_Host * pow((radius_host) / (moon_host_D), 0.5);

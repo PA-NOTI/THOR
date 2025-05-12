@@ -342,7 +342,7 @@ void Insolation::print_config() {
     log::printf("    Simulated moon irradiated by host planet = %s.\n", moon_irr_config ? "true" : "false");
     log::printf("    Distance between moon and host planet    = %f \n", moon_host_D_config);
     log::printf("    Radius of the host planet                = %f \n", radius_host_config);    
-    log::printf("    Orbital mean motion of the host         = %f rad/s.\n", mean_motion_host_config);
+    log::printf("    Orbital mean motion of the host          = %f rad/s.\n", mean_motion_host_config);
 
 }
 
@@ -373,6 +373,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         ecc_host              = ecc_host_config;        
         double ecc_anomaly_host_i  = true2ecc_anomaly(true_anomaly_i, ecc_host);        
         mean_anomaly_host_i        = fmod(ecc_anomaly_host_i  - ecc_host * sin(ecc_anomaly_host_i ), (2 * M_PI));
+        bool print_once            = true;
 
         insol_avg = NO_INSOL_AVG;
         if (insol_avg_str == "NoInsolAvg") {
@@ -633,7 +634,12 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     const double pi       = atan((double)(1)) * 4;
 
     if (moon_irr_mode) {
-        mean_anomaly = fmod((  ((2.0*Omega)) * time + mean_anomaly_i), (2 * M_PI));
+        mean_anomaly = fmod((  ((4.0*Omega)) * time + mean_anomaly_i), (2 * M_PI));  //  2.0*Omega
+        if (print_once) {
+            log::printf("    Moon's omega         = %f rad/s.\n",4.0*Omega);
+            print_once = false;
+        }
+        
     }
     else {
         mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
@@ -649,7 +655,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     sin_decl = sin(obliquity) * sin(true_long);
     cos_decl = sqrt(1.0 - sin_decl * sin_decl);
     if (moon_irr_mode) {
-        alpha = -2.0*Omega * time + true_long - true_long_i + alpha_i;
+        alpha = -4.0*Omega * time + true_long - true_long_i + alpha_i;
     }
     else {
         alpha = -Omega * time + true_long - true_long_i + alpha_i;
