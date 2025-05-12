@@ -634,7 +634,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     const double pi       = atan((double)(1)) * 4;
 
     if (moon_irr_mode) {
-        mean_anomaly = fmod((  ((2.5*Omega)) * time + mean_anomaly_i), (2 * M_PI));  //  2.0*Omega
+        mean_anomaly = fmod((  ((1*Omega)) * time + mean_anomaly_i), (2 * M_PI));  //  2.0*Omega
         if (print_once) {
             log::printf("    Moon's omega         = %f rad/s.\n",2.5*Omega);
             print_once = false;
