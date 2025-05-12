@@ -373,7 +373,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         ecc_host              = ecc_host_config;        
         double ecc_anomaly_host_i  = true2ecc_anomaly(true_anomaly_i, ecc_host);        
         mean_anomaly_host_i        = fmod(ecc_anomaly_host_i  - ecc_host * sin(ecc_anomaly_host_i ), (2 * M_PI));
-        bool print_once            = true;
+        
 
         insol_avg = NO_INSOL_AVG;
         if (insol_avg_str == "NoInsolAvg") {
