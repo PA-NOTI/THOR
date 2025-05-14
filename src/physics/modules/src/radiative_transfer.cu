@@ -459,8 +459,8 @@ bool radiative_transfer::initial_conditions(const ESP &            esp,
                 rt1Dmode_config,
                 sim.Tmean,
                 moon_irr_config,
-                moon_host_D_config,
                 radius_host_config,
+                moon_host_D_config,
                 table_num_parmentier_config,
                 PF_mode_config);
                 
@@ -485,8 +485,8 @@ bool radiative_transfer::initial_conditions(const ESP &            esp,
                 rt1Dmode_config,
                 sim.Tmean,
                 moon_irr_config,
-                moon_host_D_config,
                 radius_host_config,
+                moon_host_D_config,
                 table_num_parmentier_config,
                 PF_mode_config);
 
