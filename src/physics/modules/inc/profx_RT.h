@@ -58,7 +58,11 @@ __device__ void radcsw(double *phtemp,
                        double *insol_d,
                        bool    DeepModel,
                        bool    GravHeightVar,
-                       bool    moon_irr_config) {
+                       bool    moon_irr_config,
+                       double  coszrs_moon,
+                       bool    eclipse_status,
+                       double  Fraction_reflection
+                       double  moon_distance_F) {
 
     //  Calculate upward, downward, and net flux.
     //  Downward Directed Radiation
@@ -66,6 +70,10 @@ __device__ void radcsw(double *phtemp,
     // double gocp;
     //double tau      = (tausw / ps0) * (phtemp[id * (nv + 1) + nv]);
     double tau;
+    double insol_d_moon;
+    double flux_top_moon;
+    insol_d_moon  = 0.0;
+    flux_top_moon = 0.0;
     if (GravHeightVar) {
         tau = (kappa_sw / (gravit * pow(A / (A + Altitudeh_d[nv + 1]), 2)))
               * (phtemp[id * (nv + 1) + nv]);
@@ -73,18 +81,39 @@ __device__ void radcsw(double *phtemp,
     else {
         tau = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
     }
-    if (moon_irr_config){
-        insol_d[id]     = incflx * pow(r_orb_host, -2) * coszrs;
-    }
-    else {
-        insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
+    if (eclipse_status)
+    {
+        insol_d[id]     = 0.0;
+        insol_d_moon    = 0.0;
+    } else
+    {
+        if (moon_irr_config){
+            insol_d[id]     = incflx * pow(r_orb_host, -2) * coszrs;
+            insol_d_moon    = incflx * pow(r_orb_host, -2) *coszrs_moon;
+        }
+        else {
+            insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
+        }
     }
     
-    double flux_top = insol_d[id] * (1.0 - alb);
+    
+    
+    
+    double flux_top = insol_d[id] * (1.0 - alb);    
     double rup, rlow;
 
-    // Extra layer to avoid over heating at the top.
-    fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau);
+    if (moon_irr_config){
+        flux_top_moon = insol_d_moon * (alb);
+        // Extra layer to avoid over heating at the top.
+        fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
+    } else
+    {
+        // Extra layer to avoid over heating at the top.
+        fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau);
+    }
+    
+
+
 
     // Normal integration
     for (int lev = nv; lev >= 1; lev--)
@@ -207,8 +236,9 @@ __device__ void radclw(double *phtemp,
     } 
     for (int lev = nv - 1; lev >= 0; lev--) {
         double ed = 0.0;
-        if (tau_d[id * nv * 2 + 2 * lev + 1] < 0.0)
+        if (tau_d[id * nv * 2 + 2 * lev + 1] < 0.0) {
             tau_d[id * nv * 2 + 2 * lev + 1] = 0.0;
+        }
 
         tb = thtemp[id * (nv + 1) + lev];
         tl = ttemp[id * nv + lev];
@@ -220,10 +250,20 @@ __device__ void radclw(double *phtemp,
 
         ed = source_func_lin(bb, bl, bt, tau_d[id * nv * 2 + 2 * lev + 1], diff_ang);
 
-        flw_dn_d[id * (nv + 1) + lev] =
-            ed
-            + flw_dn_d[id * (nv + 1) + lev + 1]
-                  * exp(-(1. / diff_ang) * tau_d[id * nv * 2 + 2 * lev + 1]);
+        if (moon_irr_config && lev == nv - 1) { 
+            flw_dn_d[id * (nv + 1) + lev] =
+                ed
+                + flw_dn_d[id * (nv + 1) + lev + 1]
+                    * exp(-(1. / diff_ang) * tau_d[id * nv * 2 + 2 * lev + 1]);
+        } else
+        {
+            flw_dn_d[id * (nv + 1) + lev] =
+                ed
+                + flw_dn_d[id * (nv + 1) + lev + 1]
+                    * exp(-(1. / diff_ang) * tau_d[id * nv * 2 + 2 * lev + 1]);
+        }
+
+        
     }
     //
     //  Upward Directed Radiation
@@ -387,7 +427,10 @@ __global__ void rtm_dual_band(double *pressure_d,
                               bool    DeepModel,
                               bool    GravHeightVar,
                               bool    moon_irr_config,
-                              double *moon_host_angles_d) {
+                              double *moon_host_angles_d,
+                              bool    eclipse_status,
+                              double  Fraction_reflection,
+                              double  moon_distance_F) {
 
 
     //
@@ -403,6 +446,11 @@ __global__ void rtm_dual_band(double *pressure_d,
     int id = blockIdx.x * blockDim.x + threadIdx.x;
 
     double coszrs;
+    if (moon_irr_config)
+    {
+        double coszrs_moon;
+    }
+    
     double ps, psm;
     double pp, ptop;
 
@@ -472,6 +520,10 @@ __global__ void rtm_dual_band(double *pressure_d,
         }
         else {
             coszrs = zenith_angles[id];
+            if (moon_irr_config)
+            {
+                coszrs_moon = moon_host_angles_d[id];
+            }
         }
 
         //hack for daily averaged insolation
@@ -530,7 +582,11 @@ __global__ void rtm_dual_band(double *pressure_d,
                    insol_d,
                    DeepModel,
                    GravHeightVar,
-                   moon_irr_config);
+                   moon_irr_config,
+                   coszrs_moon,
+                   eclipse_status,
+                   Fraction_reflection,
+                   moon_distance_F);
         }
         else {
             insol_d[id] = 0;

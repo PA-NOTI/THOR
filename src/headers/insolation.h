@@ -99,6 +99,10 @@ public:
         return r_orb;
     }
 
+    double get_r_orb_host() {
+        return r_orb_host;
+    }
+
     double get_mean_motion() {
         return mean_motion;
     }
@@ -113,9 +117,18 @@ public:
         return cos_zenith_angles_moon.get_host_data();
     }
 
-    double get_r_orb_host() {
-        return r_orb_host;
+    bool get_eclipse_status() {
+        return eclipse_status;
     }
+
+    double get_Fraction_reflection() {
+        return Fraction_reflection;
+    }
+
+    double get_moon_orbit_distance_change() {
+        return moon_orbit_distance_change;
+    }
+    
 
 private:
     bool enabled = false;
@@ -160,12 +173,17 @@ private:
     double radius_host        = 0;        // radius of the host planet
     double moon_irr           = 0;        //    
     double mean_motion_host_config = 1.991e-7; // orbital mean motion of host planet (rad/s)    
-    double mean_motion_host   = 1.991e-7; // orbital mean motion of host planet (rad/s)    
-    double mean_anomaly_host_i= 0;        // initial mean anomaly of host planet at start (rad)
-    double mean_anomaly_host  = 0;        // current mean anomaly of host planet (rad)    
-    double ecc_host           = 0;        // orbital eccentricity of host planet    
-    double ecc_host_config    = 0;        // orbital eccentricity of host planet    
-    double r_orb_host         = 1;        // orbital distance/semi-major axis
+    double mean_motion_host        = 1.991e-7; // orbital mean motion of host planet (rad/s)    
+    double mean_anomaly_host_i     = 0;        // initial mean anomaly of host planet at start (rad)
+    double mean_anomaly_host       = 0;        // current mean anomaly of host planet (rad)    
+    double ecc_host                = 0;        // orbital eccentricity of host planet    
+    double ecc_host_config         = 0;        // orbital eccentricity of host planet    
+    double r_orb_host              = 1;        // orbital distance/semi-major axis
+    //double dayside_contribution  = 0;        // fraction of fluxes coming from the dayside    
+    //double nightside_contribution= 0;        // fraction of fluxes coming from the nightside
+    double Fraction_reflection     = 0;   // fraction of fluxes coming from the dayside
+    bool   eclipse_status          = false; 
+    double moon_orbit_distance_change = 0.0;  // relative changes due to moon orbit
 
     bool print_once            = true;
     

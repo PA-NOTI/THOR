@@ -867,8 +867,10 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
         double F0_h;
         
         double F_fromHost = 0.0;
-        double Thost;
-        double Teq_Host;
+        //double Thost_day;
+        //double Teq_Host_day;
+        double Thost_night;
+        double Teq_Host_night;
 
         double test_angles = 0.0;
         // double const sb = 5.670374419e-8;
@@ -889,6 +891,8 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             fprintf(stderr, "moon_host_angles_d cudaMemcpyHostToDevice failed!");
         //goto Error;
         }
+
+        incflx_final = incflx;
         
         if (moon_irr_mode) {   
             /*    
@@ -906,19 +910,27 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             }
             */
             F_fromHost = 0.0;
-            Teq_Host = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
-            Thost = Teq_Host * pow((radius_host) / (moon_host_D), 0.5);
-            F_fromHost = SIGMA_SB_th * pow(Thost, 4.0);
-            if (F_fromHost== 0.0) {
-                printf("F_fromHost is zero");
+            //Teq_Host_day = Tstar * pow((radius_star) / (1.0*planet_star_dist), 0.5);
+            //Thost_day = Teq_Host_day * pow((radius_host) / (moon_host_D), 0.5);
+            //F_fromHost = SIGMA_SB_th * pow(Thost_day, 4.0);
+            moon_distance_F = pow((radius_host) / (moon_host_D), 2);
+            Teq_Host_night = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
+            Thost_night = Teq_Host_night * pow((radius_host) / (moon_host_D), 0.5);
+            F_fromHost = SIGMA_SB_th * pow(Thost_night, 4.0);
+            if (print_once_F_fromHost) {
+                log::printf("   F_fromHost         = %f W/m^2.\n",F_fromHost);
+                print_once_F_fromHost = false;
             }
+
+            incflx_final = (pow(radius_star / (planet_star_dist +esp.insolation.moon_orbit_distance_change()*moon_host_D), 2.0) / pow(radius_star / planet_star_dist, 2.0))*incflx;
+
+            
         }
         
 
         if (rt_type == PICKETFENCE) {
 
             Tirr = Tstar * pow((radius_star) / (planet_star_dist), 0.5);
-
             F0_h = SIGMA_SB_th * pow(Tirr, 4.0);
 
             for (int c = 0; c < esp.point_num; c++) {
@@ -1182,7 +1194,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                          n_sw,
                                          n_lw,
                                          esp.f_lw,
-                                         incflx,
+                                         incflx_final,
                                          sim.P_Ref,
                                          esp.point_num,
                                          esp.nv,
@@ -1210,7 +1222,10 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                          sim.DeepModel,
                                          sim.GravHeightVar,
                                          moon_irr_mode,
-                                         esp.insolation.get_device_cos_zenith_angles_moon());
+                                         esp.insolation.get_device_cos_zenith_angles_moon(),
+                                         esp.insolation.get_eclipse_status(),
+                                         esp.insolation.get_Fraction_reflection(),
+                                         moon_distance_F);
         }
 
 

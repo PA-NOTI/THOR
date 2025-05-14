@@ -248,6 +248,11 @@ private:
     bool PF_mode;
     double* moon_host_angles_d;
     double* moon_host_angles_h;
+    double moon_distance_F;
+    double incflx_final;
+
+    
+    bool print_once_F_fromHost = true;
 
     //  These arrays are for temporary usage in RT code
     double* dtemp;

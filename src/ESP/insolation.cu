@@ -630,22 +630,21 @@ bool Insolation::store(const ESP& esp, storage& s) {
 void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode) {
 
     // Update the insolation related parameters for spin and orbit
-    double ecc_anomaly, true_long, ecc_anomaly_host;
+    double ecc_anomaly, true_long, ecc_anomaly_host, pol_2_moon, phi_min, eclipse_phi;
     const double pi       = atan((double)(1)) * 4;
 
+    /*
     if (moon_irr_mode) {
-        mean_anomaly = fmod((  ((1*Omega)) * time + mean_anomaly_i), (2 * M_PI));  //  2.0*Omega
-        if (print_once) {
-            log::printf("    Moon's omega         = %f rad/s.\n",2.5*Omega);
-            print_once = false;
-        }
+        mean_anomaly = fmod((  ((mean_motion)) * time + mean_anomaly_i), (2 * M_PI)); 
+        
         
     }
     else {
         mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
     } 
+    */
 
-    
+    mean_anomaly = fmod((mean_motion * time + mean_anomaly_i), (2 * M_PI));
 
     ecc_anomaly = fmod(solve_kepler(mean_anomaly, ecc), (2 * M_PI));
 
@@ -655,7 +654,11 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     sin_decl = sin(obliquity) * sin(true_long);
     cos_decl = sqrt(1.0 - sin_decl * sin_decl);
     if (moon_irr_mode) {
-        alpha = -2.5*Omega * time + true_long - true_long_i + alpha_i;
+        alpha = -2.0*Omega * time + true_long - true_long_i + alpha_i;
+        if (print_once) {
+            log::printf("    Moon's omega         = %f rad/s.\n",2.0*Omega);
+            print_once = false;
+        }
     }
     else {
         alpha = -Omega * time + true_long - true_long_i + alpha_i;
@@ -665,10 +668,44 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
     if (moon_irr_mode) {
 
+        eclipse_status = false;
+        phi_min        = 0;
+        moon_orbit_distance_change = moon_orbit_distance_change;
+
         mean_anomaly_host = fmod((mean_motion_host * time + mean_anomaly_host_i), (2 * M_PI));
 
-        ecc_anomaly_host = fmod(solve_kepler(mean_anomaly_host, ecc_host), (2 * M_PI));
+        ecc_anomaly_host  = fmod(solve_kepler(mean_anomaly_host, ecc_host), (2 * M_PI));
 
-        r_orb_host     = calc_r_orb(ecc_anomaly_host, ecc_host);
+        r_orb_host        = calc_r_orb(ecc_anomaly_host, ecc_host);
+
+        moon_orbit_distance_change        = (sin(mean_anomaly) + 1.0)/2.0;
+
+        if (obliquity == M_PI/2){
+            Fraction_reflection = 0.5;
+        } else{
+            if (obliquity != 0.0){
+                pol_2_moon = pow(radius_host*radius_host +moon_host_D*moon_host_D -2.0*radius_host*moon_host_D*cos(M_PI/2-obliquity),0.5) ;
+                phi_min = asin(sin(M_PI/2-obliquity*moon_host_D/pol_2_moon)) - M_PI/2;
+            }
+            if (phi_min<0.0 || obliquity == 0.0)
+            {
+                eclipse_phi = acos(radius_host/moon_host_D);
+                if (mean_anomaly>(eclipse_phi+ M_PI/2) && mean_anomaly<(M_PI + (M_PI/2 - eclipse_phi) ))
+                {
+                    eclipse_status = true;
+                    Fraction_reflection = 0.0;
+                }
+                else {
+                    Fraction_reflection = (cos(mean_anomaly) + 1.0)/2.0;
+                }
+            } else {
+                Fraction_reflection = (cos(mean_anomaly) + 1.0)/2.0*(M_PI - phi_min)/M_PI    +   (-cos(mean_anomaly) + 1.0)/2.0*(phi_min)/M_PI;
+            }
+            
+        }
+
+        
+
+    
     }
 }
