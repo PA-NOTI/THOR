@@ -224,7 +224,8 @@ __device__ void radclw(double *phtemp,
                        double  F_fromHost,
                        double  alb,
                        bool    GravHeightVar,
-                       double  kappa_lw) {
+                       double  kappa_lw,
+                       double  r_orb) {
 
     // double gocp = gravit / Cp;
     double tb, tl, tt;
@@ -654,7 +655,8 @@ __global__ void rtm_dual_band(double *pressure_d,
                F_fromHost,
                alb,
                GravHeightVar,
-               kappa_lw_lat);
+               kappa_lw_lat,
+               r_orb);
 
         if (surface == true) {
             surf_flux_d[id] += flw_dn_d[id * nvi + 0] - flw_up_d[id * nvi + 0];
