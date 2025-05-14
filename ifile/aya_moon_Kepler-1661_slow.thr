@@ -60,7 +60,7 @@ Rd = 287.0
 Cp = 1005.0
 
 # Mean atmospheric temperature [K]
-Tmean = 300.0
+Tmean = 360.0
 
 # Reference surface pressure [Pa] (pressure at bottom of model)
 P_ref = 100000.0
@@ -222,7 +222,7 @@ Tstar = 5777.279
 #tuned to give solar constant at 1 au
 
 # orbital distance or semi-major axis (au)
-planet_star_dist = 1.2 #1.0 #1.00014
+planet_star_dist = 1.4 #1.2 #1.0 #1.00014
 
 # radius of host star (R_sun)
 radius_star = 1.0
