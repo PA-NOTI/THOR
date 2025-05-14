@@ -74,83 +74,86 @@ __device__ void radcsw(double *phtemp,
     double flux_top_moon;
     insol_d_moon  = 0.0;
     flux_top_moon = 0.0;
-    if (GravHeightVar) {
-        tau = (kappa_sw / (gravit * pow(A / (A + Altitudeh_d[nv + 1]), 2)))
-              * (phtemp[id * (nv + 1) + nv]);
-    }
-    else {
-        tau = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
-    }
-    if (eclipse_status)
+    if (coszrs != 0.0 || coszrs_moon != 0.0)
     {
-        insol_d[id]     = 0.0;
-        insol_d_moon    = 0.0;
-    } else
-    {
+        if (GravHeightVar) {
+            tau = (kappa_sw / (gravit * pow(A / (A + Altitudeh_d[nv + 1]), 2)))
+                * (phtemp[id * (nv + 1) + nv]);
+        }
+        else {
+            tau = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
+        }
+        if (eclipse_status)
+        {
+            insol_d[id]     = 0.0;
+            insol_d_moon    = 0.0;
+        } else
+        {
+            if (moon_irr_config){
+                insol_d[id]     = incflx * pow(r_orb_host, -2) * coszrs;
+                insol_d_moon    = incflx * pow(r_orb_host, -2) *coszrs_moon;
+            }
+            else {
+                insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
+            }
+        }
+        
+        
+        
+        
+        double flux_top = insol_d[id] * (1.0 - alb);    
+        double rup, rlow;
+
         if (moon_irr_config){
-            insol_d[id]     = incflx * pow(r_orb_host, -2) * coszrs;
-            insol_d_moon    = incflx * pow(r_orb_host, -2) *coszrs_moon;
+            flux_top_moon = insol_d_moon * (alb);
+            // Extra layer to avoid over heating at the top.
+            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
+        } else
+        {
+            // Extra layer to avoid over heating at the top.
+            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau);
         }
-        else {
-            insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
-        }
-    }
-    
-    
-    
-    
-    double flux_top = insol_d[id] * (1.0 - alb);    
-    double rup, rlow;
-
-    if (moon_irr_config){
-        flux_top_moon = insol_d_moon * (alb);
-        // Extra layer to avoid over heating at the top.
-        fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
-    } else
-    {
-        // Extra layer to avoid over heating at the top.
-        fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau);
-    }
-    
+        
 
 
 
-    // Normal integration
-    for (int lev = nv; lev >= 1; lev--)
-        fsw_dn_d[id * (nv + 1) + lev - 1] =
-            fsw_dn_d[id * (nv + 1) + lev]
-            * exp(-(1.0 / coszrs) * tau_d[id * nv * 2 + (lev - 1) * 2]);
-    for (int lev = 0; lev <= nv; lev++)
-        fsw_up_d[id * (nv + 1) + lev] = 0.0;
+        // Normal integration
+        for (int lev = nv; lev >= 1; lev--)
+            fsw_dn_d[id * (nv + 1) + lev - 1] =
+                fsw_dn_d[id * (nv + 1) + lev]
+                * exp(-(1.0 / coszrs) * tau_d[id * nv * 2 + (lev - 1) * 2]);
+        for (int lev = 0; lev <= nv; lev++)
+            fsw_up_d[id * (nv + 1) + lev] = 0.0;
 
-    // Update temperature rates.
-    for (int lev = 0; lev < nv; lev++) {
-        if (DeepModel) { //this seems to cause strange problems at TOA, set both factors to 1 for now
-            // rup =
-            //     (Altitudeh_d[lev + 1] + A) / (Altitude_d[lev] + A); //vertical scaling in divergence
-            // rlow = (Altitudeh_d[lev] + A) / (Altitude_d[lev] + A);
-            rup  = 1.0;
-            rlow = 1.0;
-        }
-        else {
-            rup  = 1.0;
-            rlow = 1.0;
-        }
-        dtemp[id * nv + lev] =
-            -(pow(rlow, 2) * (fsw_up_d[id * (nv + 1) + lev] - fsw_dn_d[id * (nv + 1) + lev])
-              - pow(rup, 2)
-                    * (fsw_up_d[id * (nv + 1) + lev + 1] - fsw_dn_d[id * (nv + 1) + lev + 1]))
-            / ((Altitudeh_d[lev] - Altitudeh_d[lev + 1]));
-        // gocp = gravit / Cp;
-        // dtemp[id * nv + lev] =
-        //     gocp
-        //     * ((fsw_up_d[id * (nv + 1) + lev] - fsw_dn_d[id * (nv + 1) + lev])
-        //        - (fsw_up_d[id * (nv + 1) + lev + 1] - fsw_dn_d[id * (nv + 1) + lev + 1]))
-        //     / (phtemp[id * (nv + 1) + lev] - phtemp[id * (nv + 1) + lev + 1]);
+        // Update temperature rates.
+        for (int lev = 0; lev < nv; lev++) {
+            if (DeepModel) { //this seems to cause strange problems at TOA, set both factors to 1 for now
+                // rup =
+                //     (Altitudeh_d[lev + 1] + A) / (Altitude_d[lev] + A); //vertical scaling in divergence
+                // rlow = (Altitudeh_d[lev] + A) / (Altitude_d[lev] + A);
+                rup  = 1.0;
+                rlow = 1.0;
+            }
+            else {
+                rup  = 1.0;
+                rlow = 1.0;
+            }
+            dtemp[id * nv + lev] =
+                -(pow(rlow, 2) * (fsw_up_d[id * (nv + 1) + lev] - fsw_dn_d[id * (nv + 1) + lev])
+                - pow(rup, 2)
+                        * (fsw_up_d[id * (nv + 1) + lev + 1] - fsw_dn_d[id * (nv + 1) + lev + 1]))
+                / ((Altitudeh_d[lev] - Altitudeh_d[lev + 1]));
+            // gocp = gravit / Cp;
+            // dtemp[id * nv + lev] =
+            //     gocp
+            //     * ((fsw_up_d[id * (nv + 1) + lev] - fsw_dn_d[id * (nv + 1) + lev])
+            //        - (fsw_up_d[id * (nv + 1) + lev + 1] - fsw_dn_d[id * (nv + 1) + lev + 1]))
+            //     / (phtemp[id * (nv + 1) + lev] - phtemp[id * (nv + 1) + lev + 1]);
 
-        // printf("%d %e\n", lev, (dtemp2 - dtemp[id * nv + lev]) / dtemp2);
-        if (isnan(dtemp[id * nv + lev])) {
-            printf("stop here");
+            // printf("%d %e\n", lev, (dtemp2 - dtemp[id * nv + lev]) / dtemp2);
+            if (isnan(dtemp[id * nv + lev])) {
+                printf("stop here");
+            }
         }
     }
 }
