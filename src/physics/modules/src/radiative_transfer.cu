@@ -918,6 +918,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             Thost_night = Teq_Host_night * pow((radius_host) / (moon_host_D), 0.5);
             F_fromHost = SIGMA_SB_th * pow(Thost_night, 4.0);
             if (print_once_F_fromHost) {
+                log::printf("   Moon mode in the RT scheme active\n");
                 log::printf("   F_fromHost         = %f W/m^2.\n",F_fromHost);
                 print_once_F_fromHost = false;
             }
@@ -1609,6 +1610,8 @@ void radiative_transfer::RTSetup(double Tstar_,
     moon_host_D      = moon_host_D_;
     
     PF_mode          = PF_mode_;
+
+    moon_irr_mode    = moon_irr_mode_;
     
     if (PF_mode) {
       rt_type = PICKETFENCE;
