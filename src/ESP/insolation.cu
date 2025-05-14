@@ -685,10 +685,12 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
         } else{
             if (obliquity != 0.0){
                 pol_2_moon = pow(radius_host*radius_host +moon_host_D*moon_host_D -2.0*radius_host*moon_host_D*cos(M_PI/2-obliquity),0.5) ;
-                phi_min = asin(sin(M_PI/2-obliquity*moon_host_D/pol_2_moon)) - M_PI/2;
+                phi_min = asin(sin(M_PI/2-obliquity)*moon_host_D/pol_2_moon) - M_PI/2;
             }
             if (phi_min<0.0 || obliquity == 0.0)
             {
+                log::printf("    eclipse not tested yet !!!!!!!!!\n");
+                log::printf("    probably gravity wave problems  \n");
                 eclipse_phi = acos(radius_host/moon_host_D);
                 if (mean_anomaly>(eclipse_phi+ M_PI/2) && mean_anomaly<(M_PI + (M_PI/2 - eclipse_phi) ))
                 {
