@@ -230,6 +230,7 @@ __device__ void radclw(double *phtemp,
     double tb, tl, tt;
     double bb, bl, bt;
     double rup, rlow;
+    double tau;
 
     double bc = 5.677036E-8; //Stefan–Boltzmann constant W⋅m−2⋅K−4
 
