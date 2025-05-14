@@ -448,11 +448,8 @@ __global__ void rtm_dual_band(double *pressure_d,
 
     int id = blockIdx.x * blockDim.x + threadIdx.x;
 
-    double coszrs;
-    if (moon_irr_config)
-    {
-        double coszrs_moon;
-    }
+    double coszrs, coszrs_moon;
+    
     
     double ps, psm;
     double pp, ptop;
