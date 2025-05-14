@@ -922,7 +922,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                 print_once_F_fromHost = false;
             }
 
-            incflx_final = (pow(radius_star / (planet_star_dist +esp.insolation.moon_orbit_distance_change()*moon_host_D), 2.0) / pow(radius_star / planet_star_dist, 2.0))*incflx;
+            incflx_final = (pow(radius_star / (planet_star_dist +esp.insolation.get_moon_orbit_distance_change()*moon_host_D), 2.0) / pow(radius_star / planet_star_dist, 2.0))*incflx;
 
             
         }

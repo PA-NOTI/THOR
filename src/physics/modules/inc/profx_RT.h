@@ -61,7 +61,7 @@ __device__ void radcsw(double *phtemp,
                        bool    moon_irr_config,
                        double  coszrs_moon,
                        bool    eclipse_status,
-                       double  Fraction_reflection
+                       double  Fraction_reflection,
                        double  moon_distance_F) {
 
     //  Calculate upward, downward, and net flux.
