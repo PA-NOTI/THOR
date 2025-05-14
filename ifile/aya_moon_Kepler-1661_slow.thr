@@ -285,10 +285,10 @@ mean_motion = 5.287439270919805e-06 #4.8721220112600084e-6 4.456567427451835e-6
 # rotation_rate = 5.287439270919805e-06
 
 # initial substellar longitude (deg)
-alpha_i = 90
+alpha_i = 0
 
 # initial orbital position (deg)
-true_long_i = 0
+true_long_i = 90
 
 # eccentricity of orbit
 ecc =  0.0 #0.1116649  #0.15718256803919456 #0.0944 #0.01671

@@ -105,9 +105,10 @@ __device__ void radcsw(double *phtemp,
         double rup, rlow;
 
         if (moon_irr_config){
-            flux_top_moon = insol_d_moon * (alb);
+            flux_top_moon = insol_d_moon * (alb) * (1.0 - alb);
             // Extra layer to avoid over heating at the top.
-            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
+            //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
+            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection);
         } else
         {
             // Extra layer to avoid over heating at the top.
@@ -220,7 +221,10 @@ __device__ void radclw(double *phtemp,
                        bool    DeepModel,
                        bool    moon_irr_config,
                        double *moon_host_angles_d,
-                       double  F_fromHost) {
+                       double  F_fromHost,
+                       double  alb,
+                       bool    GravHeightVar,
+                       double  kappa_lw) {
 
     // double gocp = gravit / Cp;
     double tb, tl, tt;
@@ -233,9 +237,19 @@ __device__ void radclw(double *phtemp,
     //  Calculate upward, downward, and net flux.
     //  Downward Directed Radiation
     //
+
+
     flw_dn_d[id * (nv + 1) + nv] = 0.0; // Upper boundary
     if (moon_irr_config) {        
-            flw_dn_d[id * (nv + 1) + nv] = F_fromHost*moon_host_angles_d[id];
+        if (GravHeightVar) {
+            tau = (kappa_lw / (gravit * pow(A / (A + Altitudeh_d[nv + 1]), 2)))
+                * (phtemp[id * (nv + 1) + nv]);
+        }
+        else {
+            tau = (kappa_lw / gravit) * (phtemp[id * (nv + 1) + nv]);
+        }
+        
+        flw_dn_d[id * (nv + 1) + nv] = F_fromHost*moon_host_angles_d[id] * (1.0 - alb) * exp(-(1.0 / moon_host_angles_d[id] ) * tau) ;
     } 
     for (int lev = nv - 1; lev >= 0; lev--) {
         double ed = 0.0;
@@ -636,7 +650,10 @@ __global__ void rtm_dual_band(double *pressure_d,
                DeepModel,
                moon_irr_config,
                moon_host_angles_d,
-               F_fromHost);
+               F_fromHost,
+               alb,
+               GravHeightVar,
+               kappa_lw_lat);
 
         if (surface == true) {
             surf_flux_d[id] += flw_dn_d[id * nvi + 0] - flw_up_d[id * nvi + 0];
