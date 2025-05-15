@@ -913,11 +913,14 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             //Teq_Host_day = Tstar * pow((radius_star) / (1.0*planet_star_dist), 0.5);
             //Thost_day = Teq_Host_day * pow((radius_host) / (moon_host_D), 0.5);
             //F_fromHost = SIGMA_SB_th * pow(Thost_day, 4.0);
-            moon_distance_F = pow((radius_host) / (moon_host_D), 2);
+            moon_distance_F = 0; //pow((radius_host) / (moon_host_D), 2);
             Teq_Host_night = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
             Thost_night = Teq_Host_night * pow((radius_host) / (moon_host_D), 0.5);
             F_fromHost = SIGMA_SB_th * pow(Thost_night, 4.0);
-            incflx_final = (pow(radius_star / (planet_star_dist +esp.insolation.get_moon_orbit_distance_change()*moon_host_D), 2.0) / pow(radius_star / planet_star_dist, 2.0))*incflx;
+            incflx_final = (pow(radius_star / (planet_star_dist +esp.insolation.get_moon_orbit_distance_change()*moon_host_D), 2.0)
+                            / pow(radius_star / planet_star_dist, 2.0))*incflx;
+            incflx_moon = (pow(radius_star / (planet_star_dist + moon_host_D), 2.0)
+                            / pow(radius_star / planet_star_dist, 2.0))*incflx;
 
             if (print_once_F_fromHost) {
                 log::printf("   Moon mode in the RT scheme active\n");
@@ -929,6 +932,8 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                 log::printf("   incflx_final (direct + refelction)         = %f W/m^2.\n",incflx_final);
                 log::printf("   moon_host_D                                = %f m \n",moon_host_D);
                 log::printf("   radius_host                                = %f W/m^2.\n",radius_host);
+                log::printf("   esp.insolation.get_r_orb()                 = %f \n", esp.insolation.get_r_orb());
+                
                 print_once_F_fromHost = false;
             }
 
@@ -1204,6 +1209,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                          n_lw,
                                          esp.f_lw,
                                          incflx_final,
+                                         incflx_moon,
                                          sim.P_Ref,
                                          esp.point_num,
                                          esp.nv,

@@ -250,6 +250,7 @@ private:
     double* moon_host_angles_h;
     double moon_distance_F;
     double incflx_final;
+    double incflx_moon;
 
     
     bool print_once_F_fromHost = true;

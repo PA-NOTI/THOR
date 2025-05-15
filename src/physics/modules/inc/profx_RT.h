@@ -48,6 +48,7 @@ __device__ void radcsw(double *phtemp,
                        double *Altitude_d,
                        double *Altitudeh_d,
                        double  incflx,
+                       double  incflx_moon,
                        double  alb,
                        double  kappa_sw,
                        double  ps0,
@@ -90,8 +91,8 @@ __device__ void radcsw(double *phtemp,
         } else
         {
             if (moon_irr_config){
-                insol_d[id]     = incflx * pow(r_orb_host, -2) * coszrs;
-                insol_d_moon    = incflx * pow(r_orb_host, -2) *coszrs_moon;
+                insol_d[id]     = incflx      * pow(r_orb_host, -2) * coszrs;
+                insol_d_moon    = incflx_moon * pow(r_orb_host, -2) * coszrs_moon;
             }
             else {
                 insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
@@ -108,6 +109,7 @@ __device__ void radcsw(double *phtemp,
             flux_top_moon = insol_d_moon * (alb) * (1.0 - alb);
             // Extra layer to avoid over heating at the top.
             fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
+            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection);
             //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau) ;
             //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection);
         } else
@@ -420,6 +422,7 @@ __global__ void rtm_dual_band(double *pressure_d,
                               double  n_lw,
                               double  f_lw,
                               double  incflx,
+                              double  incflx_moon,
                               double  ps0,
                               int     num,
                               int     nv,
@@ -589,6 +592,7 @@ __global__ void rtm_dual_band(double *pressure_d,
                    Altitude_d,
                    Altitudeh_d,
                    incflx,
+                   incflx_moon,
                    alb,
                    kappa_sw,
                    ps0,
