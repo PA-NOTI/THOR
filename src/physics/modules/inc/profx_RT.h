@@ -50,6 +50,7 @@ __device__ void radcsw(double *phtemp,
                        double  incflx,
                        double  incflx_moon,
                        double  alb,
+                       double  albedo_host,
                        double  kappa_sw,
                        double  ps0,
                        double  gravit,
@@ -91,11 +92,14 @@ __device__ void radcsw(double *phtemp,
         } else
         {
             if (moon_irr_config){
-                insol_d[id]     = incflx      * pow(r_orb_host, -2) * coszrs;
-                insol_d_moon    = incflx_moon * pow(r_orb_host, -2) * coszrs_moon;
+                //insol_d[id]     = incflx      * pow(r_orb_host, -2) * coszrs;
+                //insol_d_moon    = incflx_moon * pow(r_orb_host, -2) * coszrs_moon;                
+                insol_d[id]     = incflx      *  coszrs;
+                insol_d_moon    = incflx_moon *  coszrs_moon;
             }
             else {
-                insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
+                //insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
+                insol_d[id]     = incflx * coszrs;
             }
         }
         
@@ -106,9 +110,9 @@ __device__ void radcsw(double *phtemp,
         double rup, rlow;
 
         if (moon_irr_config){
-            flux_top_moon = insol_d_moon * (alb) * (1.0 - alb);
+            flux_top_moon = insol_d_moon * (albedo_host) * (1.0 - alb);
             // Extra layer to avoid over heating at the top.
-            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
+            //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
             fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection);
             //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau) ;
             //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection);
@@ -254,7 +258,8 @@ __device__ void radclw(double *phtemp,
             tau = (kappa_lw / gravit) * (phtemp[id * (nv + 1) + nv]);
         }
         
-        flw_dn_d[id * (nv + 1) + nv] = F_fromHost*pow(r_orb, -2)*moon_host_angles_d[id] * (1.0 - alb) * exp(-(1.0 / moon_host_angles_d[id] ) * tau) ;
+        //flw_dn_d[id * (nv + 1) + nv] = F_fromHost*pow(r_orb, -2)*moon_host_angles_d[id] * (1.0 - alb) * exp(-(1.0 / moon_host_angles_d[id] ) * tau) ;
+        flw_dn_d[id * (nv + 1) + nv] = F_fromHost*moon_host_angles_d[id] * (1.0 - alb) * exp(-(1.0 / moon_host_angles_d[id] ) * tau) ;
     } 
     for (int lev = nv - 1; lev >= 0; lev--) {
         double ed = 0.0;
@@ -414,6 +419,7 @@ __global__ void rtm_dual_band(double *pressure_d,
                               double  diff_ang,
                               double  tint,
                               double  alb,
+                              double  albedo_host,
                               double  kappa_sw,
                               double  kappa_lw,
                               bool    latf_lw,
@@ -594,6 +600,7 @@ __global__ void rtm_dual_band(double *pressure_d,
                    incflx,
                    incflx_moon,
                    alb,
+                   albedo_host,
                    kappa_sw,
                    ps0,
                    gravit,

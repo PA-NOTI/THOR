@@ -113,6 +113,7 @@ private:
     bool   moon_irr_config      = false;
     double moon_host_D_config   = 0.0;
     double radius_host_config   = 0.0;
+    double albedo_host_config   = 0.0;
     
     bool   PF_mode_config       = false;  // if the RT scheme uses picket-fence or a double grey RT scheme
     //string rt_type_config       = DualbandGray;
@@ -251,6 +252,7 @@ private:
     double moon_distance_F;
     double incflx_final;
     double incflx_moon;
+    double albedo_host;
 
     
     bool print_once_F_fromHost = true;
@@ -280,5 +282,7 @@ private:
                     double radius_host_,
                     double moon_host_D_,
                     double table_num_parmentier_,
-                    bool PF_mode);
+                    bool PF_mode,
+                    double albedo_host_
+                    );
 };

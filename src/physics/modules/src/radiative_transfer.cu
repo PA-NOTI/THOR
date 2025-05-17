@@ -98,6 +98,7 @@ void radiative_transfer::print_config() {
     log::printf("    Mood mode                   = %s \n", moon_irr_config ? "true" : "false");
     log::printf("    distance host to moon (m)   = %f.\n", moon_host_D_config);
     log::printf("    radius of host (m)          = %f.\n", radius_host_config);
+    log::printf("    radius of host (m)          = %f.\n", abledo_host_config);
     
     
     log::printf("    if picket-fence method table number used for gamma  = %f.\n", table_num_parmentier_config);
@@ -462,7 +463,8 @@ bool radiative_transfer::initial_conditions(const ESP &            esp,
                 radius_host_config,
                 moon_host_D_config,
                 table_num_parmentier_config,
-                PF_mode_config);
+                PF_mode_config,
+                albedo_host_config);
                 
 
         cudaMemset(surf_flux_d, 0, sizeof(double) * esp.point_num);
@@ -488,7 +490,8 @@ bool radiative_transfer::initial_conditions(const ESP &            esp,
                 radius_host_config,
                 moon_host_D_config,
                 table_num_parmentier_config,
-                PF_mode_config);
+                PF_mode_config
+                albedo_host_config);
 
         cudaMemset(surf_flux_d, 0, sizeof(double) * esp.point_num);
     }
@@ -892,7 +895,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
         //goto Error;
         }
 
-        incflx_final = incflx;
+        
         
         if (moon_irr_mode) {   
             /*    
@@ -914,13 +917,13 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             //Thost_day = Teq_Host_day * pow((radius_host) / (moon_host_D), 0.5);
             //F_fromHost = SIGMA_SB_th * pow(Thost_day, 4.0);
             moon_distance_F = 0; //pow((radius_host) / (moon_host_D), 2);
-            Teq_Host_night = Tstar * pow((radius_star) / (2.0*planet_star_dist), 0.5);
-            Thost_night = Teq_Host_night * pow((radius_host) / (moon_host_D), 0.5);
+            Teq_Host_night = Tstar * pow((radius_star) / (2.0*planet_star_dist*esp.insolation.get_r_orb_host()), 0.5);
+            Thost_night = Teq_Host_night * pow((radius_host) / (moon_host_D*esp.insolation.get_r_orb()), 0.5);
             F_fromHost = SIGMA_SB_th * pow(Thost_night, 4.0);
-            incflx_final = (pow(radius_star / (planet_star_dist +esp.insolation.get_moon_orbit_distance_change()*moon_host_D), 2.0)
-                            / pow(radius_star / planet_star_dist, 2.0))*incflx;
-            incflx_moon = (pow(radius_star / (planet_star_dist + moon_host_D), 2.0)
-                            / pow(radius_star / planet_star_dist, 2.0))*incflx;
+            incflx_final = (pow(radius_star / (planet_star_dist*esp.insolation.get_r_orb_host() + esp.insolation.get_moon_orbit_distance_change()*moon_host_D*esp.insolation.get_r_orb()), 2.0)
+                            / pow(radius_star / planet_star_dist*esp.insolation.get_r_orb_host(), 2.0))*incflx;
+            incflx_moon = (pow(radius_star / (planet_star_dist*esp.insolation.get_r_orb_host() + (moon_host_D*esp.insolation.get_r_orb())), 2.0)
+                            / pow(radius_star / planet_star_dist*esp.insolation.get_r_orb_host(), 2.0))*incflx;
 
             if (print_once_F_fromHost) {
                 log::printf("   Moon mode in the RT scheme active\n");
@@ -929,17 +932,23 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                 log::printf("   Tirr_lw_from_Host                          = %f K.\n",Thost_night);
                 log::printf("   F_fromHost                                 = %f W/m^2.\n",F_fromHost);
                 log::printf("   incflx (flux direct from the star)         = %f W/m^2.\n",incflx);
-                log::printf("   incflx_final (direct + refelction)         = %f W/m^2.\n",incflx_final);
+                log::printf("   incflx_final (direct)                      = %f W/m^2.\n",incflx_final);
+                log::printf("   incflx_moon (sw refelction)                = %f W/m^2.\n",incflx_final);
                 log::printf("   moon_host_D                                = %f m \n",moon_host_D);
                 log::printf("   radius_host                                = %f W/m^2.\n",radius_host);
                 log::printf("   esp.insolation.get_r_orb()                 = %f \n", esp.insolation.get_r_orb());
+                log::printf("   esp.insolation.get_Fraction_reflection()   = %f \n", esp.insolation.get_Fraction_reflection());
                 
                 print_once_F_fromHost = false;
             }
 
             
             
+        } else
+        {
+            incflx_final = incflx*esp.insolation.get_r_orb();
         }
+        
         
 
         if (rt_type == PICKETFENCE) {
@@ -1201,6 +1210,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                                          diff_ang,
                                          esp.Tint,
                                          albedo,
+                                         albedo_host,
                                          kappa_sw,
                                          kappa_lw,
                                          latf_lw,
@@ -1276,7 +1286,8 @@ bool radiative_transfer::configure(config_file &config_reader) {
     config_reader.append_config_var("moon_host_D", moon_host_D_config, moon_host_D_config);
     config_reader.append_config_var("radius_host", radius_host_config, radius_host_config);
     config_reader.append_config_var("PF_mode", PF_mode_config, PF_mode_config);
-    config_reader.append_config_var("table_num_parmentier", table_num_parmentier_config, table_num_parmentier_config);
+    config_reader.append_config_var("table_num_parmentier", table_num_parmentier_config, table_num_parmentier_config);    
+    config_reader.append_config_var("albedo_host", albedo_host_config, albedo_host_config);
     
 
 
@@ -1612,7 +1623,8 @@ void radiative_transfer::RTSetup(double Tstar_,
                                  double radius_host_,
                                  double moon_host_D_,
                                  double table_num_parmentier_,
-                                 bool PF_mode_) {
+                                 bool PF_mode_,
+                                 double albedo_host_) {
 
     // double bc = 5.6703744191844314e-08; // Stefan–Boltzmann constant [W m−2 K−4]
 
@@ -1626,6 +1638,7 @@ void radiative_transfer::RTSetup(double Tstar_,
     PF_mode          = PF_mode_;
 
     moon_irr_mode    = moon_irr_mode_;
+    albedo_host      = albedo_host_;
     
     if (PF_mode) {
       rt_type = PICKETFENCE;
