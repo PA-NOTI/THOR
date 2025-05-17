@@ -98,7 +98,7 @@ void radiative_transfer::print_config() {
     log::printf("    Mood mode                   = %s \n", moon_irr_config ? "true" : "false");
     log::printf("    distance host to moon (m)   = %f.\n", moon_host_D_config);
     log::printf("    radius of host (m)          = %f.\n", radius_host_config);
-    log::printf("    radius of host (m)          = %f.\n", abledo_host_config);
+    log::printf("    radius of host (m)          = %f.\n", albedo_host_config);
     
     
     log::printf("    if picket-fence method table number used for gamma  = %f.\n", table_num_parmentier_config);
@@ -490,7 +490,7 @@ bool radiative_transfer::initial_conditions(const ESP &            esp,
                 radius_host_config,
                 moon_host_D_config,
                 table_num_parmentier_config,
-                PF_mode_config
+                PF_mode_config,
                 albedo_host_config);
 
         cudaMemset(surf_flux_d, 0, sizeof(double) * esp.point_num);
