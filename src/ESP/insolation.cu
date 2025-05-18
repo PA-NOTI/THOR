@@ -699,10 +699,10 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                     Fraction_reflection = 0.0;
                 }
                 else {
-                    Fraction_reflection = (cos(mean_anomaly) + 1.0)/2.0;
+                    Fraction_reflection = (cos(mean_anomaly + M_PI/2) + 1.0)/2.0;
                 }
             } else {
-                Fraction_reflection = (cos(mean_anomaly) + 1.0)/2.0*(1 - obliquity/(M_PI/2))    +   (-cos(mean_anomaly) + 1.0)/2.0*(phi_min)/M_PI;
+                Fraction_reflection = (cos(mean_anomaly + M_PI/2) + 1.0)/2.0*(1 - obliquity/(M_PI/2))    +   (-cos(mean_anomaly + M_PI/2) + 1.0)/2.0*(phi_min)/M_PI;
             }
             
         }

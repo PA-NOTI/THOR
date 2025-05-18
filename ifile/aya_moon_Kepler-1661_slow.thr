@@ -288,7 +288,7 @@ mean_motion = 5.287439270919805e-06 #4.8721220112600084e-6 4.456567427451835e-6
 alpha_i = 180
 
 # initial orbital position (deg)
-true_long_i = 90
+true_long_i = 180
 
 # eccentricity of orbit
 ecc =  0.0 #0.1116649  #0.15718256803919456 #0.0944 #0.01671
@@ -317,7 +317,7 @@ mean_motion_host = 4.155545838081737e-07
 ecc_host = 0.01671
 
 # bond albedo of planet
-albedo_host = 0.7
+albedo_host = 0.5
 
 #########################################################
 

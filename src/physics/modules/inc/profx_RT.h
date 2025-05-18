@@ -129,7 +129,9 @@ __device__ void radcsw(double *phtemp,
         for (int lev = nv; lev >= 1; lev--)
             fsw_dn_d[id * (nv + 1) + lev - 1] =
                 fsw_dn_d[id * (nv + 1) + lev]
-                * exp(-(1.0 / coszrs) * tau_d[id * nv * 2 + (lev - 1) * 2]);
+                * exp(-(1.0 / 1.0) * tau_d[id * nv * 2 + (lev - 1) * 2]);
+                //fsw_dn_d[id * (nv + 1) + lev]
+                //* exp(-(1.0 / coszrs) * tau_d[id * nv * 2 + (lev - 1) * 2]);
         for (int lev = 0; lev <= nv; lev++)
             fsw_up_d[id * (nv + 1) + lev] = 0.0;
 
