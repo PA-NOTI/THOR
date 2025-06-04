@@ -133,7 +133,7 @@
 #define bv_freq_default 0.01
 
 #define MetStar_default 0.0
-#define Tstar_default 5700
+#define Tstar_default 5700.0
 #define radius_star_default 1.0
 #define planet_star_dist_default 1.0
 
