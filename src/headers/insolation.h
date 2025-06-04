@@ -223,7 +223,7 @@ private:
     double r_orb_host              = 1;        // orbital distance/semi-major axis
     //double dayside_contribution  = 0;        // fraction of fluxes coming from the dayside    
     //double nightside_contribution= 0;        // fraction of fluxes coming from the nightside
-    double Fraction_reflection     = 0;   // fraction of fluxes coming from the dayside
+    double Fraction_reflection     = 0.0;   // fraction of fluxes coming from the dayside
     bool   eclipse_status          = false; 
     double moon_orbit_distance_change = 0.0;  // relative changes due to moon orbit
 
