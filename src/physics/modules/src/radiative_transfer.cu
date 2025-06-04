@@ -897,7 +897,7 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
 
         
         
-        if (moon_irr_mode) {   
+        if (sim.moon_irr_mode) {   
             /*    
             for (int c = 0; c < esp.point_num; c++) {                
                 cudaDeviceSynchronize();
@@ -917,13 +917,28 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             //Thost_day = Teq_Host_day * pow((radius_host) / (moon_host_D), 0.5);
             //F_fromHost = SIGMA_SB_th * pow(Thost_day, 4.0);
             moon_distance_F = 0; //pow((radius_host) / (moon_host_D), 2);
-            Teq_Host_night = Tstar * pow((radius_star) / (2.0*planet_star_dist*esp.insolation.get_r_orb_host()), 0.5);
-            Thost_night = Teq_Host_night * pow((radius_host) / (moon_host_D*esp.insolation.get_r_orb()), 0.5);
-            F_fromHost = SIGMA_SB_th * pow(Thost_night, 4.0);
-            incflx_final = (pow(radius_star / (planet_star_dist*esp.insolation.get_r_orb_host() + esp.insolation.get_moon_orbit_distance_change()*moon_host_D*esp.insolation.get_r_orb()), 2.0)
-                            / pow(radius_star / planet_star_dist*esp.insolation.get_r_orb_host(), 2.0))*incflx;
-            incflx_moon = (pow(radius_star / (planet_star_dist*esp.insolation.get_r_orb_host() + (moon_host_D*esp.insolation.get_r_orb())), 2.0)
-                            / pow(radius_star / planet_star_dist*esp.insolation.get_r_orb_host(), 2.0))*incflx;
+
+            if (sim.binary_star_mode)
+            {
+                incflx_final    = esp.insolation.get_incflx_S1();
+                incflx_final_S2 = esp.insolation.get_incflx_S2();
+                F_fromHost      = esp.insolation.get_incflx_IR();
+                incflx_moon     = esp.insolation.get_incflx_reflection();
+            }
+            else
+            {
+                Teq_Host_night = Tstar * pow((radius_star) / (2.0*planet_star_dist*esp.insolation.get_r_orb_host()), 0.5);
+                Thost_night = Teq_Host_night * pow((radius_host) / (moon_host_D*esp.insolation.get_r_orb()), 0.5);
+                F_fromHost = SIGMA_SB_th * pow(Thost_night, 4.0);
+                incflx_final = (pow(radius_star / (planet_star_dist*esp.insolation.get_r_orb_host() + esp.insolation.get_moon_orbit_distance_change()*moon_host_D*esp.insolation.get_r_orb()), 2.0)
+                                / pow(radius_star / planet_star_dist*esp.insolation.get_r_orb_host(), 2.0))*incflx;
+                incflx_moon = (pow(radius_star / (planet_star_dist*esp.insolation.get_r_orb_host() + (moon_host_D*esp.insolation.get_r_orb())), 2.0)
+                                / pow(radius_star / planet_star_dist*esp.insolation.get_r_orb_host(), 2.0))*incflx;
+            }
+            
+            
+            
+            
 
             if (print_once_F_fromHost) {
                 log::printf("   Moon mode in the RT scheme active\n");
@@ -946,7 +961,16 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             
         } else
         {
-            incflx_final = incflx*esp.insolation.get_r_orb();
+            
+            if (sim.binary_star_mode)
+            {                
+                incflx_final    = esp.insolation.get_incflx_S1();
+                incflx_final_S2 = esp.insolation.get_incflx_S2();
+            }
+            else
+            {
+                incflx_final = incflx*esp.insolation.get_r_orb();
+            }
         }
         
         
@@ -1186,71 +1210,148 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
             cudaDeviceSynchronize();
             cuda_check_status_or_exit(__FILE__, __LINE__);
 
-            rtm_dual_band<<<NBRT, NTH>>>(esp.pressure_d,
-                                         esp.Rho_d,
-                                         esp.temperature_d,
-                                         flw_up_d,
-                                         flw_dn_d,
-                                         fsw_up_d,
-                                         fsw_dn_d,
-                                         tau_d,
-                                         sim.Gravit,
-                                         esp.Cp_d,
-                                         esp.lonlat_d,
-                                         esp.Altitude_d,
-                                         esp.Altitudeh_d,
-                                         phtemp,
-                                         dtemp,
-                                         ttemp,
-                                         thtemp,
-                                         time_step,
-                                         Tstar,
-                                         planet_star_dist,
-                                         radius_star,
-                                         diff_ang,
-                                         esp.Tint,
-                                         albedo,
-                                         albedo_host,
-                                         kappa_sw,
-                                         kappa_lw,
-                                         latf_lw,
-                                         kappa_lw_pole,
-                                         n_sw,
-                                         n_lw,
-                                         esp.f_lw,
-                                         incflx_final,
-                                         incflx_moon,
-                                         sim.P_Ref,
-                                         esp.point_num,
-                                         esp.nv,
-                                         esp.nvi,
-                                         sim.A,
-                                         esp.insolation.get_r_orb(),                                         
-                                         esp.insolation.get_r_orb_host(),
-                                         esp.insolation.get_device_cos_zenith_angles(),
-                                         insol_d,
-                                         esp.surface,
-                                         esp.Csurf,
-                                         esp.Tsurface_d,
-                                         esp.dTsurf_dt_d,
-                                         surf_flux_d,
-                                         esp.areasT_d,
-                                         ASR_d,
-                                         OLR_d,
-                                         esp.profx_Qheat_d,
-                                         qheat_d,
-                                         esp.Rd_d,
-                                         Qheat_scaling,
-                                         F_fromHost,
-                                         sim.gcm_off,
-                                         rt1Dmode,
-                                         sim.DeepModel,
-                                         sim.GravHeightVar,
-                                         moon_irr_mode,
-                                         esp.insolation.get_device_cos_zenith_angles_moon(),
-                                         esp.insolation.get_eclipse_status(),
-                                         esp.insolation.get_Fraction_reflection(),
-                                         moon_distance_F);
+            if (sim.binary_star_mode)
+            {
+                rtm_dual_band_binary<<<NBRT, NTH>>>(esp.pressure_d,
+                                                    esp.Rho_d,
+                                                    esp.temperature_d,
+                                                    flw_up_d,
+                                                    flw_dn_d,
+                                                    fsw_up_d,
+                                                    fsw_dn_d,
+                                                    tau_d,
+                                                    sim.Gravit,
+                                                    esp.Cp_d,
+                                                    esp.lonlat_d,
+                                                    esp.Altitude_d,
+                                                    esp.Altitudeh_d,
+                                                    phtemp,
+                                                    dtemp,
+                                                    ttemp,
+                                                    thtemp,
+                                                    time_step,
+                                                    Tstar,
+                                                    planet_star_dist,
+                                                    radius_star,
+                                                    diff_ang,
+                                                    esp.Tint,
+                                                    albedo,
+                                                    albedo_host,
+                                                    kappa_sw,
+                                                    kappa_lw,
+                                                    latf_lw,
+                                                    kappa_lw_pole,
+                                                    n_sw,
+                                                    n_lw,
+                                                    esp.f_lw,
+                                                    incflx_final,
+                                                    incflx_final_S2,
+                                                    incflx_moon,
+                                                    sim.P_Ref,
+                                                    esp.point_num,
+                                                    esp.nv,
+                                                    esp.nvi,
+                                                    sim.A,
+                                                    esp.insolation.get_r_orb(),                                         
+                                                    esp.insolation.get_r_orb_host(),
+                                                    esp.insolation.get_device_cos_zenith_angles_S1(),
+                                                    esp.insolation.get_device_cos_zenith_angles_S2(),
+                                                    insol_d,
+                                                    esp.surface,
+                                                    esp.Csurf,
+                                                    esp.Tsurface_d,
+                                                    esp.dTsurf_dt_d,
+                                                    surf_flux_d,
+                                                    esp.areasT_d,
+                                                    ASR_d,
+                                                    OLR_d,
+                                                    esp.profx_Qheat_d,
+                                                    qheat_d,
+                                                    esp.Rd_d,
+                                                    Qheat_scaling,
+                                                    F_fromHost,
+                                                    sim.gcm_off,
+                                                    rt1Dmode,
+                                                    sim.DeepModel,
+                                                    sim.GravHeightVar,
+                                                    moon_irr_mode,
+                                                    esp.insolation.get_device_cos_zenith_angles_moon(),
+                                                    esp.insolation.get_eclipse_status(),
+                                                    esp.insolation.get_Fraction_reflection(),
+                                                    moon_distance_F);
+            }
+            else
+            {
+                rtm_dual_band<<<NBRT, NTH>>>(esp.pressure_d,
+                                            esp.Rho_d,
+                                            esp.temperature_d,
+                                            flw_up_d,
+                                            flw_dn_d,
+                                            fsw_up_d,
+                                            fsw_dn_d,
+                                            tau_d,
+                                            sim.Gravit,
+                                            esp.Cp_d,
+                                            esp.lonlat_d,
+                                            esp.Altitude_d,
+                                            esp.Altitudeh_d,
+                                            phtemp,
+                                            dtemp,
+                                            ttemp,
+                                            thtemp,
+                                            time_step,
+                                            Tstar,
+                                            planet_star_dist,
+                                            radius_star,
+                                            diff_ang,
+                                            esp.Tint,
+                                            albedo,
+                                            albedo_host,
+                                            kappa_sw,
+                                            kappa_lw,
+                                            latf_lw,
+                                            kappa_lw_pole,
+                                            n_sw,
+                                            n_lw,
+                                            esp.f_lw,
+                                            incflx_final,
+                                            incflx_moon,
+                                            sim.P_Ref,
+                                            esp.point_num,
+                                            esp.nv,
+                                            esp.nvi,
+                                            sim.A,
+                                            esp.insolation.get_r_orb(),                                         
+                                            esp.insolation.get_r_orb_host(),
+                                            esp.insolation.get_device_cos_zenith_angles(),
+                                            insol_d,
+                                            esp.surface,
+                                            esp.Csurf,
+                                            esp.Tsurface_d,
+                                            esp.dTsurf_dt_d,
+                                            surf_flux_d,
+                                            esp.areasT_d,
+                                            ASR_d,
+                                            OLR_d,
+                                            esp.profx_Qheat_d,
+                                            qheat_d,
+                                            esp.Rd_d,
+                                            Qheat_scaling,
+                                            F_fromHost,
+                                            sim.gcm_off,
+                                            rt1Dmode,
+                                            sim.DeepModel,
+                                            sim.GravHeightVar,
+                                            moon_irr_mode,
+                                            esp.insolation.get_device_cos_zenith_angles_moon(),
+                                            esp.insolation.get_eclipse_status(),
+                                            esp.insolation.get_Fraction_reflection(),
+                                            moon_distance_F);
+            }
+            
+            
+
+            
         }
 
 

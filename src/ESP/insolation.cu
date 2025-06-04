@@ -168,6 +168,50 @@ calc_zenith(double*      lonlat_d, //latitude/longitude grid
 }
 
 __device__ double
+calc_zenith_binary(double*      lonlat_d, //latitude/longitude grid
+            const double alpha,    //current RA of star (relative to zero long on planet)
+            const double alpha_i,
+            const double phi,      // additional angle for binary star
+            const double sin_decl, //declination of star
+            const double cos_decl,
+            const bool   sync_rot,
+            const double ecc,
+            const double obliquity,
+            const int    id) {
+
+    // Calculate the insolation (scaling) at a point on the surface
+
+    double coszrs;
+
+    if (sync_rot) {
+        if (ecc < 1e-10) {
+            if (obliquity < 1e-10) { //standard sync, circular, zero obl case
+                coszrs = cos(lonlat_d[id * 2 + 1]) * cos(lonlat_d[id * 2] - alpha_i);
+            }
+            else { //sync, circular, but some obliquity
+                coszrs = (sin(lonlat_d[id * 2 + 1]) * sin_decl
+                          + cos(lonlat_d[id * 2 + 1]) * cos_decl * cos(lonlat_d[id * 2] - alpha_i));
+            }
+        }
+        else {                       //in below cases, watch out for numerical drift of mean(alpha)
+            if (obliquity < 1e-10) { // sync, zero obliquity, but ecc orbit
+                coszrs = cos(lonlat_d[id * 2 + 1]) * cos(lonlat_d[id * 2] - alpha - phi);
+            }
+            else { // sync, non-zero obliquity, ecc orbit (full calculation applies)
+                coszrs = (sin(lonlat_d[id * 2 + 1]) * sin_decl
+                          + cos(lonlat_d[id * 2 + 1]) * cos_decl * cos(lonlat_d[id * 2] - alpha - phi));
+            }
+        }
+    }
+    else {
+        coszrs = (sin(lonlat_d[id * 2 + 1]) * sin_decl
+                  + cos(lonlat_d[id * 2 + 1]) * cos_decl * cos(lonlat_d[id * 2] - alpha - phi));
+    }
+    return coszrs; //zenith angle
+}
+
+
+__device__ double
 calc_zenith_moon(double*      lonlat_d, //latitude/longitude grid
                  const int    id,
                  double  alpha_i) {
@@ -219,6 +263,71 @@ __global__ void compute_cos_zenith_angles(double* cos_zenith_angles,
             cos_zenith_angles[column_idx] = coszrs;
     }
 }
+
+
+
+// compute zenith angle for a full grid of lat/lon data
+__global__ void compute_cos_zenith_angles_binary(double* cos_zenith_angles_S1,
+                                          double* cos_zenith_angles_S2,
+                                          double* lonlat_d,
+                                          double  alpha,
+                                          double  alpha_i,
+                                          double  phi_S1,
+                                          double  phi_S2,
+                                          double  sin_decl,
+                                          double  cos_decl,
+                                          double  ecc,
+                                          double  obliquity,
+                                          bool    sync_rot,
+                                          int     num_points) {
+    // helios_angle_star = pi - zenith_angle
+    // cos(helios_angle_star) = mu_star = cos(pi - zenith_angle) = -cos(zenith_angle)
+    // Zenith angle is only positive.
+    // mu_star is only negative in helios -> need to change sign outside of here for Alfrodull
+    // radiative transfer uses zenith angle
+    int column_idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+    if (column_idx < num_points) {
+        double coszrs_S1 = calc_zenith_binary(lonlat_d, //latitude/longitude grid
+                                    alpha,    //current RA of star (relative to zero long on planet)
+                                    alpha_i,
+                                    phi_S1,
+                                    sin_decl, //declination of star
+                                    cos_decl,
+                                    sync_rot,
+                                    ecc,
+                                    obliquity,
+                                    column_idx);
+
+        //hack
+        // double coszrs = cos(75 * M_PI / 180.);
+
+        if (coszrs_S1 < 0.0)
+            cos_zenith_angles_S1[column_idx] = 0.0;
+        else
+            cos_zenith_angles_S1[column_idx] = coszrs_S1;
+
+        double coszrs_S2 = calc_zenith_binary(lonlat_d, //latitude/longitude grid
+                                    alpha,    //current RA of star (relative to zero long on planet)
+                                    alpha_i,
+                                    phi_S2,
+                                    sin_decl, //declination of star
+                                    cos_decl,
+                                    sync_rot,
+                                    ecc,
+                                    obliquity,
+                                    column_idx);
+
+        //hack
+        // double coszrs = cos(75 * M_PI / 180.);
+
+        if (coszrs_S2 < 0.0)
+            cos_zenith_angles_S2[column_idx] = 0.0;
+        else
+            cos_zenith_angles_S2[column_idx] = coszrs_S2;
+    }
+}
+
 
 // compute zenith angle for a full grid of lat/lon data
 __global__ void compute_cos_zenith_angles_moon(double* cos_zenith_angles_moon,
@@ -292,6 +401,17 @@ bool Insolation::configure(config_file& config_reader) {
     config_reader.append_config_var("radius_host", radius_host_config, radius_host_config);    
     config_reader.append_config_var("mean_motion_host", mean_motion_host_config, mean_motion_host_config);    
     config_reader.append_config_var("ecc_host", ecc_host_config, ecc_host_config);
+    if (sim.binary_star_mode) {
+        config_reader.append_config_var("Tstar", Tstar_primary_config, Tstar_primary_config);
+        config_reader.append_config_var("radius_star", radius_star_primary_config, radius_star_primary_config);
+        config_reader.append_config_var("Tstar_secondary_config", Tstar_secondary_config, Tstar_secondary_config);
+        config_reader.append_config_var("radius_star_secondary_config", radius_star_secondary_config, radius_star_secondary_config);
+        config_reader.append_config_var("a_secondary_config", a_secondary_config, a_secondary_config);    
+        config_reader.append_config_var("a_primary_config", a_primary_config, a_primary_config);    
+        config_reader.append_config_var("binary_perdiod_config", binary_perdiod_config, binary_perdiod_config);    
+        config_reader.append_config_var("M_S1", M_S1_config, M_S1_config);    
+        config_reader.append_config_var("M_S2", M_S2_config, M_S2_config);
+    }
 
 
     config_reader.append_config_var("insol_avg", insol_avg_str, string(insol_avg_default));
@@ -343,6 +463,15 @@ void Insolation::print_config() {
     log::printf("    Distance between moon and host planet    = %f \n", moon_host_D_config);
     log::printf("    Radius of the host planet                = %f \n", radius_host_config);    
     log::printf("    Orbital mean motion of the host          = %f rad/s.\n", mean_motion_host_config);
+    if (sim.binary_star_mode) {
+        log::printf("    Stellar temperature of primary star                             = %f K \n", Tstar_primary_config);
+        log::printf("    Radius of host star (R_sun) of the primary star                 = %f K \n", radius_star_primary_config);
+        log::printf("    Stellar temperature of secondary star                           = %f K \n", Tstar_secondary_config);
+        log::printf("    Radius of host star (R_sun) of the secondary star               = %f K \n", radius_star_secondary_config);
+        log::printf("    Semimajor axis of the secondary star (AU) around the barycenter = %f.\n", a_secondary_config);
+        log::printf("    Semimajor axis of the primary star (AU) around the barycenter   = %f \n", a_primary_config);
+        log::printf("    Orbital period of the binary stars (days)                       = %f \n", binary_perdiod_config);
+    }
 
 }
 
@@ -366,13 +495,37 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         mean_anomaly_i        = fmod(ecc_anomaly_i - ecc * sin(ecc_anomaly_i), (2 * M_PI));
         alpha_i               = alpha_i_config * M_PI / 180.0;
         obliquity             = obliquity_config * M_PI / 180.0;
-        
-        moon_irr              = moon_irr_config;           // simulated moon irradiated by host planet
-        moon_host_D           = moon_host_D_config;        // distance between moon and host planet
-        radius_host           = radius_host_config;        // radius of the host planet        
-        ecc_host              = ecc_host_config;        
-        double ecc_anomaly_host_i  = true2ecc_anomaly(true_anomaly_i, ecc_host);        
-        mean_anomaly_host_i        = fmod(ecc_anomaly_host_i  - ecc_host * sin(ecc_anomaly_host_i ), (2 * M_PI));
+
+        if (sim.binary_star_mode) {              
+            moon_irr              = moon_irr_config;           // simulated moon irradiated by host planet
+            moon_host_D           = moon_host_D_config;        // distance between moon and host planet
+            radius_host           = radius_host_config;        // radius of the host planet        
+            ecc_host              = ecc_host_config;        
+            double ecc_anomaly_host_i  = true2ecc_anomaly(true_anomaly_i, ecc_host);        
+            mean_anomaly_host_i        = fmod(ecc_anomaly_host_i  - ecc_host * sin(ecc_anomaly_host_i ), (2 * M_PI));
+        }
+
+        if (sim.binary_star_mode) {
+            Tstar_primary                = Tstar_primary_config;                         // stellar temperature (k) of secondary star
+            radius_star_primary          = radius_star_primary_config * R_SUN_th;        // radius of host star (R_sun) of the secondary star
+            Tstar_secondary              = Tstar_secondary_config;                       // stellar temperature (k) of secondary star
+            radius_star_secondary        = radius_star_secondary_config * R_SUN_th;      // radius of host star (R_sun) of the secondary star
+            a_S2                         = a_secondary_config * AU_th;                   // Semimajor axis of the secondary star (AU) around the barycenter
+            //a_S1                         = a_primary_config   * AU_th;                 // Semimajor axis of the primary star (AU) around the barycenter
+            binary_perdiod               = binary_perdiod_config;                        // Orbital period of the binary stars (days)            
+            M_S1                         = M_S1_config;                                  // Mass of the primary star (M_Sun)            
+            M_S2                         = M_S2_config;                                  // Mass of the primary star (M_Sun) 
+
+            a_S1 = a_S2 *M_S2/ M_S1;
+            a_pc = esp.planet_star_dist;
+            
+
+
+            apparent_R_S1 = esp.radius_star;
+            apparent_R_S2 = radius_star_secondary;
+            
+            
+        }
         
 
         insol_avg = NO_INSOL_AVG;
@@ -445,7 +598,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
 
                     for (int istep = 0; istep <= n_day_steps; istep++) {
                         //trapezoidal rule here
-                        update_spin_orbit(day_start_time_h[iday] + istep * dtstep, sim.Omega, sim.moon_irr_mode);
+                        update_spin_orbit(day_start_time_h[iday] + istep * dtstep, sim.Omega, sim.moon_irr_mode, sim.binary_star_mode);
 
                         compute_cos_zenith_angles<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
                             *cos_zenith_angles,
@@ -489,7 +642,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
                     //        mean_anomaly);
                 }
                 //reset orbit to original position
-                update_spin_orbit(0.0, sim.Omega, sim.moon_irr_mode);
+                update_spin_orbit(0.0, sim.Omega, sim.moon_irr_mode, sim.binary_star_mode);
 
                 day_start_time.put();
             }
@@ -519,37 +672,66 @@ bool Insolation::phy_loop(ESP&                   esp,
         //  update global insolation properties if necessary
         if (sync_rot) {
             if (ecc > 1e-10) {
-                update_spin_orbit(nstep * time_step, sim.Omega, sim.moon_irr_mode);
+                update_spin_orbit(nstep * time_step, sim.Omega, sim.moon_irr_mode, sim.binary_star_mode);
             }
         }
         else {
-            update_spin_orbit(nstep * time_step, sim.Omega, sim.moon_irr_mode);
+            update_spin_orbit(nstep * time_step, sim.Omega, sim.moon_irr_mode, sim.binary_star_mode);
+        }
+
+
+
+        if (sim.moon_irr_mode == false)
+        {
+            compute_cos_zenith_angles<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
+                *cos_zenith_angles,
+                esp.lonlat_d,
+                alpha,
+                alpha_i,
+                sin_decl,
+                cos_decl,
+                ecc,
+                obliquity,
+                sync_rot,
+                esp.point_num);
+                
+            cudaDeviceSynchronize();
+            cuda_check_status_or_exit(__FILE__, __LINE__);
+        }            
+
+        if (sim.moon_irr_mode)
+        {
+            compute_cos_zenith_angles_moon<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
+                *cos_zenith_angles_moon,
+                esp.lonlat_d,
+                esp.point_num,
+                alpha_i);
+            cudaDeviceSynchronize();
+            cuda_check_status_or_exit(__FILE__, __LINE__);
         }
         
-
-
-        compute_cos_zenith_angles<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
-            *cos_zenith_angles,
-            esp.lonlat_d,
-            alpha,
-            alpha_i,
-            sin_decl,
-            cos_decl,
-            ecc,
-            obliquity,
-            sync_rot,
-            esp.point_num);
-            
-        cudaDeviceSynchronize();
-        cuda_check_status_or_exit(__FILE__, __LINE__);
         
-        compute_cos_zenith_angles_moon<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
-            *cos_zenith_angles_moon,
-            esp.lonlat_d,
-            esp.point_num,
-            alpha_i);
-        cudaDeviceSynchronize();
-        cuda_check_status_or_exit(__FILE__, __LINE__);
+        if (sim.binary_star_mode)
+        {
+            compute_cos_zenith_angles_binary<<<(esp.point_num / num_blocks) + 1, num_blocks>>>(
+                *cos_zenith_angles_S1,
+                *cos_zenith_angles_S2,
+                esp.lonlat_d,
+                alpha,
+                alpha_i,
+                phi_S1,
+                phi_S2,
+                sin_decl,
+                cos_decl,
+                ecc,
+                obliquity,
+                sync_rot,
+                esp.point_num);
+            cudaDeviceSynchronize();
+            cuda_check_status_or_exit(__FILE__, __LINE__);
+        }
+        
+        
 
         BENCH_POINT_I_PHY(nstep, "Insolation", (), ("coszs"));
     }
@@ -627,7 +809,7 @@ bool Insolation::store(const ESP& esp, storage& s) {
 }
 
 
-void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode) {
+void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode, bool binary_star_mode) {
 
     // Update the insolation related parameters for spin and orbit
     double ecc_anomaly, true_long, ecc_anomaly_host, pol_2_moon, phi_min, eclipse_phi;
@@ -666,6 +848,8 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     
     //alpha    = -360.0*(Omega/(2.0*pi)) * time + true_long - true_long_i + alpha_i;
 
+    
+
     if (moon_irr_mode) {
 
         eclipse_status = false;
@@ -693,19 +877,187 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                 log::printf("    eclipse not tested yet !!!!!!!!!\n");
                 log::printf("    probably gravity wave problems  \n");
                 eclipse_phi = acos(radius_host/moon_host_D);
-                if (mean_anomaly>(eclipse_phi+ M_PI/2) && mean_anomaly<(M_PI + (M_PI/2 - eclipse_phi) ))
+                if (alpha > (eclipse_phi+ M_PI/2) && alpha < (M_PI + (M_PI/2 - eclipse_phi) ))
                 {
                     eclipse_status = true;
                     Fraction_reflection = 0.0;
                 }
                 else {
-                    Fraction_reflection = (cos(mean_anomaly + M_PI/2) + 1.0)/2.0;
+                    Fraction_reflection = (cos(alpha + M_PI/2.0) + 1.0)/2.0;
                 }
             } else {
-                Fraction_reflection = (cos(mean_anomaly + M_PI/2) + 1.0)/2.0*(1 - obliquity/(M_PI/2))    +   (-cos(mean_anomaly + M_PI/2) + 1.0)/2.0*(phi_min)/M_PI;
+                Fraction_reflection = (cos(alpha + M_PI/2.0) + 1.0)/2.0*(1 - obliquity/(M_PI/2))    +   (-cos(alpha + M_PI/2.0) + 1.0)/2.0*(phi_min)/M_PI;
             }
             
         }
+
+        if (binary_star_mode) {
+        if (moon_irr_mode){
+            mean_anomaly = fmod((mean_anomaly - alpha_moon_C), (2 * M_PI));
+        }       
+        alpha_S1    = fmod((time*omega_S1), (2 * M_PI));  
+        alpha_S2    = fmod((time*omega_S1 + M_PI), (2 * M_PI));          
+        alpha_day    = fmod((time*omega_day), (2 * M_PI));
+
+    
+        if (moon_irr_mode){
+            moon_orbit_F        = -cos(alpha_day);
+            moon_orbit_F_rec    =  sin(alpha_day);
+            if (moon_orbit_F_rec == 0.0) {
+                alpha_moon_C = 0.0;
+            } 
+            else{
+                alpha_moon_C = asin((moon_orbit_F_rec*moon_host_D) / a_pc);
+            }
+        }
+        else{
+            alpha_moon_C = 0.0;
+            moon_orbit_F = 0.0;
+        }
+
+        if (moon_irr_mode){
+            //a_pc = esp.planet_star_dist + ecc_host*esp.planet_star_dist*sin(mean_anomaly) + moon_orbit_F*moon_host_D;
+            a_pc = r_orb_host*esp.planet_star_dist + moon_orbit_F*r_orb*moon_host_D;
+            
+        }
+        else
+        {
+            //a_pc = esp.planet_star_dist + ecc*esp.planet_star_dist*sin(mean_anomaly);
+            a_pc = r_orb*esp.planet_star_dist;
+        }   
+
+        if (mean_anomaly == alpha_S1){
+            gamma_S1      = 0.0;
+            gamma_S2      = 0.0;
+            a_p1          = a_pc - a_S1;
+            a_p2          = a_pc + a_S2;
+            apparent_R_S1 = R_S1;        
+            apparent_R_S2 = R_S2*a_p1/a_p2;
+            shadow_F1     = 1.0;
+            shadow_F2     = 0;            
+            phi_S1        = 0.0;
+            phi_S2        = 0.0;
+
+        }
+        else if (mean_anomaly == alpha_S2){
+            gamma_S1      = 0.0;
+            gamma_S2      = 0.0;
+            a_p1          = a_pc + a_S1;
+            a_p2          = a_pc - a_S2;
+            apparent_R_S1 = R_S1*a_p2/a_p1;     
+            apparent_R_S2 = R_S2;
+            shadow_F1     = 1.0;
+            shadow_F2     = 1.0 - (R_S2*R_S2/ (apparent_R_S1*apparent_R_S1));            
+            phi_S1        = 0.0;
+            phi_S2        = 0.0;
+        }
+        else{
+            gamma_S1      = abs(mean_anomaly- alpha_S1);
+            if (gamma_S1 > M_PI){
+                gamma_S1  = M_PI - (gamma_S1 - M_PI);
+            }                
+            gamma_S2 = abs(M_PI-gamma_S1);
+            a_p1          = pow(a_pc**2 + a_S1**2 - 2*a_pc*a_S1*cos(gamma_S1),0.5);
+            a_p2          = pow(a_pc**2 + a_S2**2 - 2*a_pc*a_S2*cos(gamma_S2),0.5);
+            phi_S1        = asin(a_S1*sin(gamma_S1)/a_p1);
+            phi_S2        = asin(a_S2*sin(gamma_S1)/a_p2);
+            
+        
+
+            //#######################
+            
+            if (a_p1 == a_p2){
+                D_critical           = a_S1 + a_S2;
+                apparent_R_S1        = R_S1;
+                apparent_R_S2        = R_S2;
+            }
+            else if (a_p1 < a_p2){
+                D_critical           = pow(2*a_p1*a_p1 - 2*a_p1*a_p1*cos(phi_S1 + phi_S2), 0.5);
+                apparent_R_S1        = R_S1;
+                apparent_R_S2        = R_S2*a_p1/a_p2;
+            }
+            else{            
+                D_critical           = pow(2*a_p2*a_p2 - 2*a_p2*a_p2*cos(phi_S1 + phi_S2), 0.5);
+                apparent_R_S1        = R_S1*a_p2/a_p1;
+                apparent_R_S2        = R_S2;
+            }
+
+            //#######################
+
+            if (D_critical >= (apparent_R_S1 + apparent_R_S2) ) {   //# no shadow
+                A_intersection = 0.0;
+                d1             = 0.0;
+                d2             = 0.0;
+                shadow_F1      = 1.0;
+                shadow_F2      = 1.0;
+            }
+            else if (D_critical <= (apparent_R_S1 - apparent_R_S2 )) {  // # totally inside
+                A_intersection = 0.0;
+                d1             = 0.0;
+                d2             = 0.0;
+
+                if (a_p1 < a_p2){
+                    shadow_F1  = 1.0;
+                    shadow_F2  = 0.0;
+                }
+                else {
+                    shadow_F1  = 1.0 - (apparent_R_S2*apparent_R_S2 / (apparent_R_S1*apparent_R_S1));
+                    shadow_F2  = 1.0:
+                }
+
+            }
+            else {                                             //#partially shadow
+
+                d1             = (apparent_R_S1*apparent_R_S1 - apparent_R_S2*apparent_R_S2 + D_critical*D_critical) /(2* D_critical);
+                d2             = D_critical - d1; 
+                
+                A_intersection =   apparent_R_S1*apparent_R_S1 * acos(d1/apparent_R_S1) 
+                                        - d1*pow(apparent_R_S1*apparent_R_S1 - d1*d1, 0.5) 
+                                        + apparent_R_S2*apparent_R_S2 * acos(d2/apparent_R_S2)
+                                        - d2*pow(apparent_R_S2*apparent_R_S2 - d2*d2, 0.5);
+                if (a_p1 < a_p2){
+                    shadow_F1  =  1.0;              
+                    shadow_F2  =  1.0   - A_intersection / (M_PI*apparent_R_S2*apparent_R_S2);
+                }
+                else {
+                    shadow_F1  =  1.0   - A_intersection / (M_PI*apparent_R_S1*apparent_R_S1);         
+                    shadow_F2  =  1.0;
+                }
+
+            
+            if ((mean_anomaly - alpha_S1) > 0.0)
+            {                
+                phi_S1        = -phi_S1;
+                phi_S2        = phi_S2;
+            }
+            else
+            {                
+                phi_S1        = phi_S1;
+                phi_S2        = -phi_S2;
+            }
+
+
+            
+            incflx_final_S1    = shadow_F1 * SIGMA_SB_th * pow(Tstar_primary  , 4.0) * pow(radius_star_primary   / a_p1, 2.0);
+            incflx_final_S2    = shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / a_p2, 2.0);
+
+            if (moon_irr_mode){                
+                incflx_IR          = ( shadow_F1 * SIGMA_SB_th * pow(Tstar_primary  , 4.0) * pow(radius_star_primary   / (2.0 * a_p1), 2.0)
+                                     + shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / (2.0 * a_p2), 2.0)
+                                     ) * pow((radius_host) / (moon_host_D*r_orb), 2.0);
+                
+                incflx_reflection  = ( shadow_F1 * SIGMA_SB_th * pow(Tstar_primary  , 4.0) * pow(radius_star_primary   / (a_p1 + moon_host_D*r_orb), 2.0)
+                                     + shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / (a_p2 + moon_host_D*r_orb), 2.0)
+                                     );
+            }
+            
+            
+            
+
+
+        }
+
+    }
 
         
 

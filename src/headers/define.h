@@ -132,6 +132,17 @@
 #define f_lw_default 0.5
 #define bv_freq_default 0.01
 
+#define MetStar_default 0.0
+#define Tstar_default 5700
+#define radius_star_default 1.0
+#define planet_star_dist_default 1.0
+
+#define moon_irr_mode_default false
+#define binary_star_mode_default false
+
+
+
+
 #define uh_thermo_default "none"
 
 #define uh_heating_default "none"

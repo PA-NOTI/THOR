@@ -423,11 +423,11 @@ int main(int argc, char** argv) {
     config_reader.append_config_var("bv_freq", bv_freq, bv_freq_default);
 
     // additional settings for parmentier profile (default values are not implemented)
-    double MetStar = 0.0, Tstar = 5000.0, radius_star = 1.203, planet_star_dist = 0.04747;
-    config_reader.append_config_var("MetStar", MetStar, Tint_default);
-    config_reader.append_config_var("Tstar", Tstar, kappa_lw_default);
-    config_reader.append_config_var("radius_star", radius_star, kappa_sw_default);
-    config_reader.append_config_var("planet_star_dist", planet_star_dist, f_lw_default);
+    double MetStar = 0.0, Tstar = 5700.0, radius_star = 1.0, planet_star_dist = 1.0;
+    config_reader.append_config_var("MetStar", MetStar, MetStar_default);
+    config_reader.append_config_var("Tstar", Tstar, Tstar_default);
+    config_reader.append_config_var("radius_star", radius_star, radius_star_default);
+    config_reader.append_config_var("planet_star_dist", planet_star_dist, planet_star_dist_default);
 
     // ultrahot thermodynamics
     string uh_thermo_str("none");
@@ -473,7 +473,9 @@ int main(int argc, char** argv) {
     config_reader.append_config_var("Csurf", Csurf_config, Csurf_config);
 
     
-    config_reader.append_config_var("moon_irr_mode", sim.moon_irr_mode, sim.moon_irr_mode);
+    config_reader.append_config_var("moon_irr_mode", sim.moon_irr_mode, moon_irr_mode_default);
+    config_reader.append_config_var("binary_star_mode", sim.binary_star_mode, binary_star_mode_default);
+    
 
 
     //*****************************************************************
@@ -692,6 +694,20 @@ int main(int argc, char** argv) {
                     init_PT_profile_str.c_str());
         config_OK &= false;
     }
+
+    if (sim.binary_star_mode == true) {
+        config_OK &= true;
+    }
+    else if (sim.binary_star_mode == false) {
+        config_OK &= true;
+    }
+    else {
+        log::printf("sim.binary_star_mode config item not recognised: [%s]\n",
+                    init_PT_profile_str.c_str());
+        config_OK &= false;
+    }
+
+    
 
     conv_adj_types conv_adj_type = HOURDIN;
 
@@ -1233,6 +1249,8 @@ int main(int argc, char** argv) {
     log::printf("   Conv adj type    =  %s.\n", conv_adj_type_str.c_str());
     
     log::printf("   moon_irr_mode    = %s \n", sim.moon_irr_mode ? "true" : "false");
+    log::printf("   binary_star_mode    = %s \n", sim.binary_star_mode ? "true" : "false");
+    
 
     log::printf("   ********** \n");
     log::printf("   Numerical diffusion\n");

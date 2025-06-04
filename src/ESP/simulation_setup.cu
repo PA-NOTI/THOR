@@ -92,4 +92,5 @@ SimulationSetup::SimulationSetup() {
     rest = true;
 
     moon_irr_mode = false;
+    binary_star_mode = false;
 }

@@ -217,14 +217,14 @@ radiative_transfer = true
 #radiative_transfer_types = 1
 rt_type = DualbandGray
 
-# stellar temperature (k)
+# stellar temperature (k) of the primary star
 Tstar = 5777.279
 #tuned to give solar constant at 1 au
 
 # orbital distance or semi-major axis (au)
 planet_star_dist = 1.0 #1.2 #1.0 #1.00014
 
-# radius of host star (R_sun)
+# radius of host star (R_sun) of the primary star
 radius_star = 1.0
 
 # bond albedo of planet
@@ -244,6 +244,31 @@ n_sw = 2
 
 # if parmentier (picket-fence), table number (1 or 2) used to compute gamma (with or without TiO and VO)
 table_num_parmentier = 2
+
+#%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+# Mode for binary star system
+binary_star_mode = true
+
+# stellar temperature (k) of secondary star
+Tstar_secondary = 3585
+
+# radius of host star (R_sun) of the secondary star
+radius_star_secondary = 1.0
+
+# Semimajor axis of the secondary star (AU) around the barycenter
+a_secondary = 0.187
+
+# Semimajor axis of the primary star (AU) around the barycenter
+a_primary = 0.276
+
+# Orbital period of the binary stars (days)
+binary_perdiod = 28.162539
+
+# Mass of the primary star (M_Sun)
+M_S1 = 0.841
+
+# Mass of the secondary star (M_Sun)
+M_S2 = 0.262
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # These params are also used if init_PT_profile = guillot
@@ -288,7 +313,7 @@ mean_motion = 5.287439270919805e-06 #4.8721220112600084e-6 4.456567427451835e-6
 alpha_i = 180
 
 # initial orbital position (deg)
-true_long_i = 180
+true_long_i = 90
 
 # eccentricity of orbit
 ecc =  0.0 #0.1116649  #0.15718256803919456 #0.0944 #0.01671

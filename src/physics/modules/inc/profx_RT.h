@@ -588,7 +588,7 @@ __global__ void rtm_dual_band(double *pressure_d,
             fsw_dn_d[id * nvi + lev] = 0.0;
         }
 
-        if (coszrs > 0.0) {
+        if (coszrs > 0.0  || coszrs_moon > 0.0) {
             radcsw(phtemp,
                    coszrs,
                    r_orb,
@@ -708,6 +708,467 @@ __global__ void rtm_dual_band(double *pressure_d,
             }
         }
     }
+}
+
+
+//////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+
+__device__ void radcsw_binary(double *phtemp,
+                       double  coszrs,
+                       double  coszrs_S2,
+                       double  r_orb,
+                       double  r_orb_host,
+                       double *dtemp,
+                       double *tau_d,
+                       double *fsw_up_d,
+                       double *fsw_dn_d,
+                       double *Altitude_d,
+                       double *Altitudeh_d,
+                       double  incflx,
+                       double  incflx_S2,
+                       double  incflx_moon,
+                       double  alb,
+                       double  albedo_host,
+                       double  kappa_sw,
+                       double  ps0,
+                       double  gravit,
+                       double  A,
+                       int     id,
+                       int     nv,
+                       double *insol_d,
+                       bool    DeepModel,
+                       bool    GravHeightVar,
+                       bool    moon_irr_config,
+                       double  coszrs_moon,
+                       bool    eclipse_status,
+                       double  Fraction_reflection,
+                       double  moon_distance_F) {
+
+    //  Calculate upward, downward, and net flux.
+    //  Downward Directed Radiation
+
+    // double gocp;
+    //double tau      = (tausw / ps0) * (phtemp[id * (nv + 1) + nv]);
+    double tau;
+    double insol_d_moon;
+    double flux_top_moon;
+    insol_d_moon  = 0.0;
+    insol_d_S2    = 0.0;
+    flux_top_moon = 0.0;
+    if (coszrs != 0.0 || coszrs_moon != 0.0  || coszrs_S2 > 0.0)
+    {
+        if (GravHeightVar) {
+            tau = (kappa_sw / (gravit * pow(A / (A + Altitudeh_d[nv + 1]), 2)))
+                * (phtemp[id * (nv + 1) + nv]);
+        }
+        else {
+            tau = (kappa_sw / gravit) * (phtemp[id * (nv + 1) + nv]);
+        }
+        if (eclipse_status)
+        {
+            insol_d[id]     = 0.0;
+            insol_d_moon    = 0.0;
+        } else
+        {
+            if (moon_irr_config){
+                //insol_d[id]     = incflx      * pow(r_orb_host, -2) * coszrs;
+                //insol_d_moon    = incflx_moon * pow(r_orb_host, -2) * coszrs_moon;                
+                insol_d[id]     = incflx         *  coszrs;
+                insol_d_moon    = incflx_moon    *  coszrs_moon;
+                insol_d_S2      = incflx_S2      *  coszrs_S2;
+            }
+            else {
+                //insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
+                insol_d[id]     = incflx         *  coszrs;
+                insol_d_S2      = incflx_S2      *  coszrs_S2;
+            }
+        }
+        
+        
+        
+        
+        double flux_top    = insol_d[id] * (1.0 - alb);
+        double flux_top_S2 = insol_d_S2  * (1.0 - alb);   
+        double rup, rlow;
+
+        if (moon_irr_config){
+            flux_top_moon = insol_d_moon * (albedo_host) * (1.0 - alb);
+            // Extra layer to avoid over heating at the top.
+            //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
+            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)   
+                                         +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection)
+                                         +     flux_top_S2 *   exp(-(1.0 / coszrs_S2) * tau)  ;
+            //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau) ;
+            //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection);
+        } else
+        {
+            // Extra layer to avoid over heating at the top.
+            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau);
+        }
+        
+
+
+
+        // Normal integration
+        for (int lev = nv; lev >= 1; lev--)
+            fsw_dn_d[id * (nv + 1) + lev - 1] =
+                fsw_dn_d[id * (nv + 1) + lev]
+                * exp(-(1.0 / 1.0) * tau_d[id * nv * 2 + (lev - 1) * 2]);
+                //fsw_dn_d[id * (nv + 1) + lev]
+                //* exp(-(1.0 / coszrs) * tau_d[id * nv * 2 + (lev - 1) * 2]);
+        for (int lev = 0; lev <= nv; lev++)
+            fsw_up_d[id * (nv + 1) + lev] = 0.0;
+
+        // Update temperature rates.
+        for (int lev = 0; lev < nv; lev++) {
+            if (DeepModel) { //this seems to cause strange problems at TOA, set both factors to 1 for now
+                // rup =
+                //     (Altitudeh_d[lev + 1] + A) / (Altitude_d[lev] + A); //vertical scaling in divergence
+                // rlow = (Altitudeh_d[lev] + A) / (Altitude_d[lev] + A);
+                rup  = 1.0;
+                rlow = 1.0;
+            }
+            else {
+                rup  = 1.0;
+                rlow = 1.0;
+            }
+            dtemp[id * nv + lev] =
+                -(pow(rlow, 2) * (fsw_up_d[id * (nv + 1) + lev] - fsw_dn_d[id * (nv + 1) + lev])
+                - pow(rup, 2)
+                        * (fsw_up_d[id * (nv + 1) + lev + 1] - fsw_dn_d[id * (nv + 1) + lev + 1]))
+                / ((Altitudeh_d[lev] - Altitudeh_d[lev + 1]));
+            // gocp = gravit / Cp;
+            // dtemp[id * nv + lev] =
+            //     gocp
+            //     * ((fsw_up_d[id * (nv + 1) + lev] - fsw_dn_d[id * (nv + 1) + lev])
+            //        - (fsw_up_d[id * (nv + 1) + lev + 1] - fsw_dn_d[id * (nv + 1) + lev + 1]))
+            //     / (phtemp[id * (nv + 1) + lev] - phtemp[id * (nv + 1) + lev + 1]);
+
+            // printf("%d %e\n", lev, (dtemp2 - dtemp[id * nv + lev]) / dtemp2);
+            if (isnan(dtemp[id * nv + lev])) {
+                printf("stop here");
+            }
+        }
+    }
+}
+
+__global__ void rtm_dual_band_binary(   double *pressure_d,
+                                        double *Rho_d,
+                                        double *temperature_d,
+                                        double *flw_up_d,
+                                        double *flw_dn_d,
+                                        double *fsw_up_d,
+                                        double *fsw_dn_d,
+                                        double *tau_d,
+                                        double  gravit,
+                                        double *Cp_d,
+                                        double *lonlat_d,
+                                        double *Altitude_d,
+                                        double *Altitudeh_d,
+                                        double *phtemp,
+                                        double *dtemp,
+                                        double *ttemp,
+                                        double *thtemp,
+                                        double  timestep,
+                                        double  tstar,
+                                        double  planet_star_dist,
+                                        double  radius_star,
+                                        double  diff_ang,
+                                        double  tint,
+                                        double  alb,
+                                        double  albedo_host,
+                                        double  kappa_sw,
+                                        double  kappa_lw,
+                                        bool    latf_lw,
+                                        double  kappa_lw_pole,
+                                        double  n_sw,
+                                        double  n_lw,
+                                        double  f_lw,
+                                        double  incflx,
+                                        double  incflx_S2,
+                                        double  incflx_moon,
+                                        double  ps0,
+                                        int     num,
+                                        int     nv,
+                                        int     nvi,
+                                        double  A,
+                                        double  r_orb,
+                                        double  r_orb_host,
+                                        double *zenith_angles,
+                                        double *zenith_angles_S2,
+                                        double *insol_d,
+                                        bool    surface,
+                                        double  Csurf,
+                                        double *Tsurface_d,
+                                        double *dTsurf_dt_d,
+                                        double *surf_flux_d,
+                                        double *areasT_d,
+                                        double *ASR_d,
+                                        double *OLR_d,
+                                        double *profx_Qheat_d,
+                                        double *DG_Qheat_d, // internal qheat for debugging
+                                        double *Rd_d,
+                                        double  Qheat_scaling,
+                                        double  F_fromHost,
+                                        bool    gcm_off,
+                                        bool    rt1Dmode,
+                                        bool    DeepModel,
+                                        bool    GravHeightVar,
+                                        bool    moon_irr_config,
+                                        double *moon_host_angles_d,
+                                        bool    eclipse_status,
+                                        double  Fraction_reflection,
+                                        double  moon_distance_F) 
+{
+    //
+    //  Description:
+    //
+    //
+    //
+    //  Input: .
+    //
+    //  Output:
+    //
+
+    int id = blockIdx.x * blockDim.x + threadIdx.x;
+
+    double coszrs, coszrs_moon, coszrs_S2;
+    
+    
+    double ps, psm;
+    double pp, ptop;
+
+    double xi, xip, xim, a, b;
+
+    if (id < num) {
+
+        for (int lev = 0; lev < nv; lev++) {
+            dtemp[id * nv + lev] = 0.0;
+        }
+        // Calculate pressures and temperatures at interfaces
+        for (int lev = 0; lev <= nv; lev++) {
+            if (lev == 0) {
+                if (GravHeightVar) {
+                    psm = pressure_d[id * nv + 1]
+                          - Rho_d[id * nv + 0] * gravit * pow(A / (A + Altitude_d[0]), 2)
+                                * (-Altitude_d[0] - Altitude_d[1]);
+                }
+                else {
+                    if (GravHeightVar) {
+                    psm = pressure_d[id * nv + 1]
+                          - Rho_d[id * nv + 0] * gravit * pow(A / (A + Altitude_d[0]), 2)
+                                * (-Altitude_d[0] - Altitude_d[1]);
+                }
+                else {
+                    psm = pressure_d[id * nv + 1]
+                              - Rho_d[id * nv + 0] * gravit * (-Altitude_d[0] - Altitude_d[1]);
+                }
+                }
+                ps = 0.5 * (pressure_d[id * nv + 0] + psm);
+
+                phtemp[id * nvi + 0] = ps;
+                ttemp[id * nv + 0]   = temperature_d[id * nv + 0];
+                thtemp[id * nvi + 0] = ttemp[id * nv + 0];
+            }
+            else if (lev == nv) {
+                // pp = pressure_d[id*nv + nv-2] - Rho_d[id*nv + nv-1] * gravit * (2*Altitudeh_d[nv]-Altitude_d[nv-1]-Altitude_d[nv-2]);
+                pp = pressure_d[id * nv + nv - 2]
+                     + (pressure_d[id * nv + nv - 1] - pressure_d[id * nv + nv - 2])
+                           / (Altitude_d[nv - 1] - Altitude_d[nv - 2])
+                           * (2 * Altitudeh_d[nv] - Altitude_d[nv - 1] - Altitude_d[nv - 2]);
+                if (pp < 0)
+                    pp = 0; //prevents pressure at the top from becoming negative
+                ptop = 0.5 * (pressure_d[id * nv + nv - 1] + pp);
+
+                phtemp[id * nvi + nv] = ptop;
+                thtemp[id * nvi + nv] = temperature_d[id * nv + nv - 1];
+            }
+            else {
+                ttemp[id * nv + lev] = temperature_d[id * nv + lev];
+                xi                   = Altitudeh_d[lev];
+                xim                  = Altitude_d[lev - 1];
+                xip                  = Altitude_d[lev];
+                a                    = (xi - xip) / (xim - xip);
+                b                    = (xi - xim) / (xip - xim);
+
+                phtemp[id * nvi + lev] =
+                    pressure_d[id * nv + lev - 1] * a + pressure_d[id * nv + lev] * b;
+                thtemp[id * nvi + lev] =
+                    temperature_d[id * nv + lev - 1] * a + ttemp[id * nv + lev] * b;
+            }
+        }
+
+        // zenith angle
+        if (rt1Dmode) {
+            coszrs = 0.5;
+        }
+        else {
+            coszrs    = zenith_angles[id];
+            coszrs_S2 = zenith_angles_S2[id];
+            if (moon_irr_config)
+            {
+                coszrs_moon = moon_host_angles_d[id];
+            }
+        }
+
+        //hack for daily averaged insolation
+        // coszrs = 0.25 * (1 + 1.4 * 0.25 * (1 - 3 * pow(sin(lonlat_d[id * 2 + 1]), 2)));
+
+        // Compute opacities
+        double kappa_lw_lat;
+        if (latf_lw) {
+            //latitude dependence of opacity, for e.g., earth
+            kappa_lw_lat =
+                kappa_lw + (kappa_lw_pole - kappa_lw) * pow(sin(lonlat_d[id * 2 + 1]), 2);
+        }
+        else {
+            kappa_lw_lat = kappa_lw;
+        }
+        //computetau(tau_d, phtemp, coszrs, tausw, taulw_lat, n_sw, n_lw, f_lw, ps0, id, nv);
+        computetau(tau_d,
+                   pressure_d,
+                   Rho_d,
+                   Altitudeh_d,
+                   kappa_sw,
+                   kappa_lw_lat,
+                   n_sw,
+                   n_lw,
+                   f_lw,
+                   ps0,
+                   id,
+                   nv);
+
+        for (int lev = 0; lev <= nv; lev++) {
+            fsw_up_d[id * nvi + lev] = 0.0;
+        }
+        for (int lev = 0; lev <= nv; lev++) {
+            fsw_dn_d[id * nvi + lev] = 0.0;
+        }
+
+        if (coszrs > 0.0  || coszrs_moon > 0.0  || coszrs_S2 > 0.0) {
+            radcsw_binary(  phtemp,
+                            coszrs,
+                            coszrs_S2,
+                            r_orb,
+                            r_orb_host,
+                            dtemp,
+                            tau_d,
+                            fsw_up_d,
+                            fsw_dn_d,
+                            Altitude_d,
+                            Altitudeh_d,
+                            incflx,
+                            incflx_S2,
+                            incflx_moon,
+                            alb,
+                            albedo_host,
+                            kappa_sw,
+                            ps0,
+                            gravit,
+                            A,
+                            id,
+                            nv,
+                            insol_d,
+                            DeepModel,
+                            GravHeightVar,
+                            moon_irr_config,
+                            coszrs_moon,
+                            eclipse_status,
+                            Fraction_reflection,
+                            moon_distance_F);
+        }
+        else {
+            insol_d[id] = 0;
+        }
+
+        if (surface == true) {
+            surf_flux_d[id] = fsw_dn_d[id * nvi + 0] - fsw_up_d[id * nvi + 0];
+        }
+
+        //calculate ASR for this point
+        double rscale;
+        if (DeepModel) {
+            rscale = (A + Altitudeh_d[nv]) / A;
+        }
+        else {
+            rscale = 1.0;
+        }
+        ASR_d[id] = fsw_dn_d[id * nvi + nv] * areasT_d[id] * pow(rscale, 2);
+
+        for (int lev = 0; lev <= nv; lev++) {
+            flw_up_d[id * nvi + lev] = 0.0;
+        }
+        for (int lev = 0; lev <= nv; lev++) {
+            flw_dn_d[id * nvi + lev] = 0.0;
+        }
+        
+        
+        
+
+        radclw(phtemp,
+               ttemp,
+               thtemp,
+               dtemp,
+               tau_d,
+               flw_up_d,
+               flw_dn_d,
+               Altitude_d,
+               Altitudeh_d,
+               diff_ang,
+               tint,
+               gravit,
+               surface,
+               Tsurface_d[id],
+               A,
+               id,
+               nv,
+               DeepModel,
+               moon_irr_config,
+               moon_host_angles_d,
+               F_fromHost,
+               alb,
+               GravHeightVar,
+               kappa_lw_lat,
+               r_orb);
+
+        if (surface == true) {
+            surf_flux_d[id] += flw_dn_d[id * nvi + 0] - flw_up_d[id * nvi + 0];
+            Tsurface_d[id] += surf_flux_d[id] * timestep / Csurf
+                              + dTsurf_dt_d[id] * timestep; // put dTsurf here temporarily
+            if (Tsurface_d[id] < 0)
+                Tsurface_d[id] = 0;
+        }
+
+        //calculate OLR for this point
+        OLR_d[id] = flw_up_d[id * nvi + nv] * areasT_d[id] * pow(rscale, 2);
+
+        for (int lev = 0; lev < nv; lev++) {
+            // if (gcm_off) {
+            //     temperature_d[id * nv + lev] = ttemp[id * nv + lev]
+            //                                    + 1.0 / (Cp_d[id * nv + lev] - Rd_d[id * nv + lev])
+            //                                          * dtemp[id * nv + lev] / Rho_d[id * nv + lev]
+            //                                          * timestep;
+            //     if (temperature_d[id * nv + lev] < 0)
+            //         temperature_d[id * nv + lev] = 0.0;
+            //     profx_Qheat_d[id * nv + lev] += Qheat_scaling * dtemp[id * nv + lev];
+            // }
+            // else {
+            if (pressure_d[id * nv + lev]
+                    + Rd_d[id * nv + lev] / (Cp_d[id * nv + lev] - Rd_d[id * nv + lev])
+                          * dtemp[id * nv + lev] * timestep
+                < 0) {
+                //trying to prevent too much cooling resulting in negative pressure in dyn core
+                dtemp[id * nv + lev] = -pressure_d[id * nv + lev] / timestep;
+            }
+            DG_Qheat_d[id * nv + lev] = dtemp[id * nv + lev];
+            profx_Qheat_d[id * nv + lev] += Qheat_scaling * dtemp[id * nv + lev];
+            if (isnan(profx_Qheat_d[id * nv + lev])) {
+                printf("stop here");
+            }
+        }
+    }
+
 }
 
 

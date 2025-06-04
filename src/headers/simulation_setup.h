@@ -116,6 +116,7 @@ public:
     int n_out;
 
     bool moon_irr_mode;
+    bool binary_star_mode;
 
     SimulationSetup();
 };

@@ -93,19 +93,19 @@ public:
     // fetch data to host and get pointer to data
     std::shared_ptr<double[]> get_host_cos_zenith_angles() {
         return cos_zenith_angles.get_host_data();
-    }
+    };
 
     double get_r_orb() {
         return r_orb;
-    }
+    };
 
     double get_r_orb_host() {
         return r_orb_host;
-    }
+    };
 
     double get_mean_motion() {
         return mean_motion;
-    }
+    };
     
         // get pointer to data on device
     double *get_device_cos_zenith_angles_moon() {
@@ -119,15 +119,57 @@ public:
 
     bool get_eclipse_status() {
         return eclipse_status;
-    }
+    };
 
     double get_Fraction_reflection() {
         return Fraction_reflection;
-    }
+    };
 
     double get_moon_orbit_distance_change() {
         return moon_orbit_distance_change;
-    }
+    };
+
+        // get pointer to data on device
+    double *get_device_cos_zenith_angles_S1() {
+        return *cos_zenith_angles_S1;
+    };
+
+        // get pointer to data on device
+    double *get_device_cos_zenith_angles_S2() {
+        return *cos_zenith_angles_S2;
+    };
+
+    double get_shadow_F1() {
+        return shadow_F1;
+    };
+
+    double get_shadow_F2() {
+        return shadow_F2;
+    };
+
+    double get_a_p1() {
+        return a_p1;
+    };
+
+    double get_a_p2() {
+        return a_p1;
+    };
+
+    double get_incflx_S1() {
+        return incflx_final_S1;
+    };
+
+    double get_incflx_S2() {
+        return incflx_final_S2;
+    };
+
+    double get_incflx_IR() {
+        return incflx_IR;
+    };
+
+    double get_incflx_reflection() {
+        return incflx_reflection;
+    };
     
 
 private:
@@ -185,6 +227,55 @@ private:
     bool   eclipse_status          = false; 
     double moon_orbit_distance_change = 0.0;  // relative changes due to moon orbit
 
+
+    double Tstar_primary                = 0.0;      // stellar temperature (k) of primary star
+    double radius_star_primary          = 0.0;      // radius of host star (R_sun) of the primary star
+    double Tstar_secondary              = 0.0;      // stellar temperature (k) of secondary star
+    double radius_star_secondary        = 0.0;      // radius of host star (R_sun) of the secondary star
+    double a_secondary                  = 0.0;      // Semimajor axis of the secondary star (AU) around the barycenter
+    double a_primary                    = 0.0;      // Semimajor axis of the primary star (AU) around the barycenter
+    double binary_perdiod               = 0.0;      // Orbital period of the binary stars (days)
+    double M_S1                         = 0.0;      // Mass of the primary star (M_Sun)
+    double M_S2                         = 0.0;      // Mass of the primary star (M_Sun)
+    double Tstar_secondary_config       = 0.0;      // stellar temperature (k) of secondary star
+    double radius_star_secondary_config = 0.0;      // radius of host star (R_sun) of the secondary star
+    double Tstar_primary_config         = 0.0;      // stellar temperature (k) of secondary star
+    double radius_star_primary_config   = 0.0;      // radius of host star (R_sun) of the secondary star
+    double a_secondary_config           = 0.0;      // Semimajor axis of the secondary star (AU) around the barycenter
+    double a_primary_config             = 0.0;      // Semimajor axis of the primary star (AU) around the barycenter
+    double binary_perdiod_config        = 0.0;      // Orbital period of the binary stars (days)
+    double M_S1_config                  = 0.0;      // Mass of the primary star (M_Sun)
+    double M_S2_config                  = 0.0;      // Mass of the primary star (M_Sun)
+    double alpha_moon_C                 = 0.0;
+    double alpha_S1                     = 0.0;
+    double alpha_S2                     = 0.0;
+    double alpha_day                    = 0.0;
+    double omega_S1                     = 0.0;
+    double omega_day                    = 0.0;
+    double omega_moon_orbit_Fday        = 0.0;
+    double moon_orbit_F_rec             = 0.0;
+    double a_pc                         = 0.0;
+    double a_S2                         = 0.0;
+    double a_S1                         = 0.0;
+    double gamma_S1                     = 0.0;
+    double gamma_S2                     = 0.0;
+    double a_p1                         = 0.0;
+    double a_p2                         = 0.0;
+    double apparent_R_S1                = 0.0;    
+    double apparent_R_S2                = 0.0;
+    double shadow_F1                    = 0.0;
+    double shadow_F2                    = 0.0;
+    double phi_S1                       = 0.0;
+    double phi_S2                       = 0.0;
+    double D_critical                   = 0.0;    
+    double d1                           = 0.0;
+    double d2                           = 0.0;
+    double A_intersection               = 0.0;
+    double incflx_final_S1              = 0.0;
+    double incflx_final_S2              = 0.0;
+    double incflx_IR                    = 0.0;
+    double incflx_reflection            = 0.0;
+
     bool print_once            = true;
     
     double table_num_parmentier_config = 2; // if picket-fence, table number used to compute gamma (with/without Tio)
@@ -194,6 +285,8 @@ private:
 
     cuda_device_memory<double> cos_zenith_angles;
     cuda_device_memory<double> cos_zenith_angles_moon;
+    cuda_device_memory<double> cos_zenith_angles_S1;
+    cuda_device_memory<double> cos_zenith_angles_S2;
 
-    void update_spin_orbit(double time, double Omega, bool moon_irr_mode);
+    void update_spin_orbit(double time, double Omega, bool moon_irr_mode, bool binary_star_mode);
 };

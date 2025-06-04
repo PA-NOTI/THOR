@@ -250,7 +250,8 @@ private:
     double* moon_host_angles_d;
     double* moon_host_angles_h;
     double moon_distance_F;
-    double incflx_final;
+    double incflx_final;    
+    double incflx_final_S2;
     double incflx_moon;
     double albedo_host;
 
