@@ -227,7 +227,7 @@ private:
     bool   eclipse_status          = false; 
     double moon_orbit_distance_change = 0.0;  // relative changes due to moon orbit
 
-
+    bool   binary_star_mode_config      = false;    // mode to simulate binary star systems
     double Tstar_primary                = 0.0;      // stellar temperature (k) of primary star
     double radius_star_primary          = 0.0;      // radius of host star (R_sun) of the primary star
     double Tstar_secondary              = 0.0;      // stellar temperature (k) of secondary star
@@ -236,7 +236,7 @@ private:
     double a_primary                    = 0.0;      // Semimajor axis of the primary star (AU) around the barycenter
     double binary_perdiod               = 0.0;      // Orbital period of the binary stars (days)
     double M_S1                         = 0.0;      // Mass of the primary star (M_Sun)
-    double M_S2                         = 0.0;      // Mass of the primary star (M_Sun)
+    double M_S2                         = 0.0;      // Mass of the secondary star (M_Sun)
     double Tstar_secondary_config       = 0.0;      // stellar temperature (k) of secondary star
     double radius_star_secondary_config = 0.0;      // radius of host star (R_sun) of the secondary star
     double Tstar_primary_config         = 0.0;      // stellar temperature (k) of secondary star
@@ -245,7 +245,7 @@ private:
     double a_primary_config             = 0.0;      // Semimajor axis of the primary star (AU) around the barycenter
     double binary_perdiod_config        = 0.0;      // Orbital period of the binary stars (days)
     double M_S1_config                  = 0.0;      // Mass of the primary star (M_Sun)
-    double M_S2_config                  = 0.0;      // Mass of the primary star (M_Sun)
+    double M_S2_config                  = 0.0;      // Mass of the secondary star (M_Sun)
     double alpha_moon_C                 = 0.0;
     double alpha_S1                     = 0.0;
     double alpha_S2                     = 0.0;
@@ -254,6 +254,7 @@ private:
     double omega_day                    = 0.0;
     double omega_moon_orbit_Fday        = 0.0;
     double moon_orbit_F_rec             = 0.0;
+    double planet_star_dist             = 0.0;
     double a_pc                         = 0.0;
     double a_S2                         = 0.0;
     double a_S1                         = 0.0;

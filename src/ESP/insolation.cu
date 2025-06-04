@@ -400,8 +400,10 @@ bool Insolation::configure(config_file& config_reader) {
     config_reader.append_config_var("moon_host_D", moon_host_D_config, moon_host_D_config);
     config_reader.append_config_var("radius_host", radius_host_config, radius_host_config);    
     config_reader.append_config_var("mean_motion_host", mean_motion_host_config, mean_motion_host_config);    
-    config_reader.append_config_var("ecc_host", ecc_host_config, ecc_host_config);
-    if (sim.binary_star_mode) {
+    config_reader.append_config_var("ecc_host", ecc_host_config, ecc_host_config);    
+
+    config_reader.append_config_var("binary_star_mode", binary_star_mode_config, binary_star_mode_config);    
+    if (binary_star_mode_config) {
         config_reader.append_config_var("Tstar", Tstar_primary_config, Tstar_primary_config);
         config_reader.append_config_var("radius_star", radius_star_primary_config, radius_star_primary_config);
         config_reader.append_config_var("Tstar_secondary_config", Tstar_secondary_config, Tstar_secondary_config);
@@ -518,6 +520,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
 
             a_S1 = a_S2 *M_S2/ M_S1;
             a_pc = esp.planet_star_dist;
+            planet_star_dist = esp.planet_star_dist;
             
 
 
@@ -809,11 +812,13 @@ bool Insolation::store(const ESP& esp, storage& s) {
 }
 
 
-void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode, bool binary_star_mode) {
+void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode, bool binary_star_mode) 
+{
 
     // Update the insolation related parameters for spin and orbit
     double ecc_anomaly, true_long, ecc_anomaly_host, pol_2_moon, phi_min, eclipse_phi;
     const double pi       = atan((double)(1)) * 4;
+    double  moon_orbit_F;
 
     /*
     if (moon_irr_mode) {
@@ -835,14 +840,17 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
     sin_decl = sin(obliquity) * sin(true_long);
     cos_decl = sqrt(1.0 - sin_decl * sin_decl);
-    if (moon_irr_mode) {
+    if (moon_irr_mode) 
+    {
         alpha = -2.0*Omega * time + true_long - true_long_i + alpha_i;
-        if (print_once) {
+        if (print_once) 
+        {
             log::printf("    Moon's omega         = %f rad/s.\n",2.0*Omega);
             print_once = false;
         }
     }
-    else {
+    else 
+    {
         alpha = -Omega * time + true_long - true_long_i + alpha_i;
     } 
     
@@ -850,7 +858,8 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
     
 
-    if (moon_irr_mode) {
+    if (moon_irr_mode) 
+    {
 
         eclipse_status = false;
         phi_min        = 0;
@@ -864,10 +873,13 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
         moon_orbit_distance_change        = (sin(mean_anomaly) + 1.0)/2.0;
 
-        if (obliquity == M_PI/2){
+        if (obliquity == M_PI/2)
+        {
             Fraction_reflection = 0.5;
-        } else{
-            if (obliquity != 0.0){
+        } else
+        {
+            if (obliquity != 0.0)
+            {
                 pol_2_moon = pow(radius_host*radius_host + moon_host_D*moon_host_D - 2.0*radius_host*moon_host_D*cos(M_PI/2-obliquity),0.5) ;
                 //phi_min = asin(sin(M_PI/2-obliquity)*moon_host_D/pol_2_moon) - M_PI/2;
                 phi_min = asin(sin(M_PI/2-obliquity)*moon_host_D/pol_2_moon);
@@ -885,179 +897,202 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                 else {
                     Fraction_reflection = (cos(alpha + M_PI/2.0) + 1.0)/2.0;
                 }
-            } else {
+            } else 
+            {
                 Fraction_reflection = (cos(alpha + M_PI/2.0) + 1.0)/2.0*(1 - obliquity/(M_PI/2))    +   (-cos(alpha + M_PI/2.0) + 1.0)/2.0*(phi_min)/M_PI;
             }
             
         }
 
         if (binary_star_mode) {
-        if (moon_irr_mode){
-            mean_anomaly = fmod((mean_anomaly - alpha_moon_C), (2 * M_PI));
-        }       
-        alpha_S1    = fmod((time*omega_S1), (2 * M_PI));  
-        alpha_S2    = fmod((time*omega_S1 + M_PI), (2 * M_PI));          
-        alpha_day    = fmod((time*omega_day), (2 * M_PI));
+            
+            if (moon_irr_mode)
+            {
+                mean_anomaly = fmod((mean_anomaly - alpha_moon_C), (2 * M_PI));
+            }       
+            alpha_S1    = fmod((time*omega_S1), (2 * M_PI));  
+            alpha_S2    = fmod((time*omega_S1 + M_PI), (2 * M_PI));          
+            alpha_day    = fmod((time*omega_day), (2 * M_PI));
 
     
-        if (moon_irr_mode){
-            moon_orbit_F        = -cos(alpha_day);
-            moon_orbit_F_rec    =  sin(alpha_day);
-            if (moon_orbit_F_rec == 0.0) {
-                alpha_moon_C = 0.0;
-            } 
-            else{
-                alpha_moon_C = asin((moon_orbit_F_rec*moon_host_D) / a_pc);
-            }
-        }
-        else{
-            alpha_moon_C = 0.0;
-            moon_orbit_F = 0.0;
-        }
-
-        if (moon_irr_mode){
-            //a_pc = esp.planet_star_dist + ecc_host*esp.planet_star_dist*sin(mean_anomaly) + moon_orbit_F*moon_host_D;
-            a_pc = r_orb_host*esp.planet_star_dist + moon_orbit_F*r_orb*moon_host_D;
-            
-        }
-        else
-        {
-            //a_pc = esp.planet_star_dist + ecc*esp.planet_star_dist*sin(mean_anomaly);
-            a_pc = r_orb*esp.planet_star_dist;
-        }   
-
-        if (mean_anomaly == alpha_S1){
-            gamma_S1      = 0.0;
-            gamma_S2      = 0.0;
-            a_p1          = a_pc - a_S1;
-            a_p2          = a_pc + a_S2;
-            apparent_R_S1 = R_S1;        
-            apparent_R_S2 = R_S2*a_p1/a_p2;
-            shadow_F1     = 1.0;
-            shadow_F2     = 0;            
-            phi_S1        = 0.0;
-            phi_S2        = 0.0;
-
-        }
-        else if (mean_anomaly == alpha_S2){
-            gamma_S1      = 0.0;
-            gamma_S2      = 0.0;
-            a_p1          = a_pc + a_S1;
-            a_p2          = a_pc - a_S2;
-            apparent_R_S1 = R_S1*a_p2/a_p1;     
-            apparent_R_S2 = R_S2;
-            shadow_F1     = 1.0;
-            shadow_F2     = 1.0 - (R_S2*R_S2/ (apparent_R_S1*apparent_R_S1));            
-            phi_S1        = 0.0;
-            phi_S2        = 0.0;
-        }
-        else{
-            gamma_S1      = abs(mean_anomaly- alpha_S1);
-            if (gamma_S1 > M_PI){
-                gamma_S1  = M_PI - (gamma_S1 - M_PI);
-            }                
-            gamma_S2 = abs(M_PI-gamma_S1);
-            a_p1          = pow(a_pc**2 + a_S1**2 - 2*a_pc*a_S1*cos(gamma_S1),0.5);
-            a_p2          = pow(a_pc**2 + a_S2**2 - 2*a_pc*a_S2*cos(gamma_S2),0.5);
-            phi_S1        = asin(a_S1*sin(gamma_S1)/a_p1);
-            phi_S2        = asin(a_S2*sin(gamma_S1)/a_p2);
-            
-        
-
-            //#######################
-            
-            if (a_p1 == a_p2){
-                D_critical           = a_S1 + a_S2;
-                apparent_R_S1        = R_S1;
-                apparent_R_S2        = R_S2;
-            }
-            else if (a_p1 < a_p2){
-                D_critical           = pow(2*a_p1*a_p1 - 2*a_p1*a_p1*cos(phi_S1 + phi_S2), 0.5);
-                apparent_R_S1        = R_S1;
-                apparent_R_S2        = R_S2*a_p1/a_p2;
-            }
-            else{            
-                D_critical           = pow(2*a_p2*a_p2 - 2*a_p2*a_p2*cos(phi_S1 + phi_S2), 0.5);
-                apparent_R_S1        = R_S1*a_p2/a_p1;
-                apparent_R_S2        = R_S2;
-            }
-
-            //#######################
-
-            if (D_critical >= (apparent_R_S1 + apparent_R_S2) ) {   //# no shadow
-                A_intersection = 0.0;
-                d1             = 0.0;
-                d2             = 0.0;
-                shadow_F1      = 1.0;
-                shadow_F2      = 1.0;
-            }
-            else if (D_critical <= (apparent_R_S1 - apparent_R_S2 )) {  // # totally inside
-                A_intersection = 0.0;
-                d1             = 0.0;
-                d2             = 0.0;
-
-                if (a_p1 < a_p2){
-                    shadow_F1  = 1.0;
-                    shadow_F2  = 0.0;
+            if (moon_irr_mode)
+            {
+                moon_orbit_F        = -cos(alpha_day);
+                moon_orbit_F_rec    =  sin(alpha_day);
+                if (moon_orbit_F_rec == 0.0) {
+                    alpha_moon_C = 0.0;
+                } 
+                else{
+                    alpha_moon_C = asin((moon_orbit_F_rec*moon_host_D) / a_pc);
                 }
-                else {
-                    shadow_F1  = 1.0 - (apparent_R_S2*apparent_R_S2 / (apparent_R_S1*apparent_R_S1));
-                    shadow_F2  = 1.0:
-                }
-
-            }
-            else {                                             //#partially shadow
-
-                d1             = (apparent_R_S1*apparent_R_S1 - apparent_R_S2*apparent_R_S2 + D_critical*D_critical) /(2* D_critical);
-                d2             = D_critical - d1; 
-                
-                A_intersection =   apparent_R_S1*apparent_R_S1 * acos(d1/apparent_R_S1) 
-                                        - d1*pow(apparent_R_S1*apparent_R_S1 - d1*d1, 0.5) 
-                                        + apparent_R_S2*apparent_R_S2 * acos(d2/apparent_R_S2)
-                                        - d2*pow(apparent_R_S2*apparent_R_S2 - d2*d2, 0.5);
-                if (a_p1 < a_p2){
-                    shadow_F1  =  1.0;              
-                    shadow_F2  =  1.0   - A_intersection / (M_PI*apparent_R_S2*apparent_R_S2);
-                }
-                else {
-                    shadow_F1  =  1.0   - A_intersection / (M_PI*apparent_R_S1*apparent_R_S1);         
-                    shadow_F2  =  1.0;
-                }
-
-            
-            if ((mean_anomaly - alpha_S1) > 0.0)
-            {                
-                phi_S1        = -phi_S1;
-                phi_S2        = phi_S2;
             }
             else
-            {                
-                phi_S1        = phi_S1;
-                phi_S2        = -phi_S2;
+            {
+                alpha_moon_C = 0.0;
+                moon_orbit_F = 0.0;
+            }
+
+            if (moon_irr_mode)
+            {
+                //a_pc = esp.planet_star_dist + ecc_host*esp.planet_star_dist*sin(mean_anomaly) + moon_orbit_F*moon_host_D;
+                a_pc = r_orb_host*planet_star_dist + moon_orbit_F*r_orb*moon_host_D;
+                
+            }
+            else
+            {
+                //a_pc = esp.planet_star_dist + ecc*esp.planet_star_dist*sin(mean_anomaly);
+                a_pc = r_orb*planet_star_dist;
+            }   
+
+            if (mean_anomaly == alpha_S1)
+            {
+                gamma_S1      = 0.0;
+                gamma_S2      = 0.0;
+                a_p1          = a_pc - a_S1;
+                a_p2          = a_pc + a_S2;
+                apparent_R_S1 = radius_star_primary;        
+                apparent_R_S2 =radius_star_secondary*a_p1/a_p2;
+                shadow_F1     = 1.0;
+                shadow_F2     = 0;            
+                phi_S1        = 0.0;
+                phi_S2        = 0.0;
+
+            }
+            else if (mean_anomaly == alpha_S2)
+            {
+                gamma_S1      = 0.0;
+                gamma_S2      = 0.0;
+                a_p1          = a_pc + a_S1;
+                a_p2          = a_pc - a_S2;
+                apparent_R_S1 = radius_star_primary*a_p2/a_p1;     
+                apparent_R_S2 =radius_star_secondary;
+                shadow_F1     = 1.0;
+                shadow_F2     = 1.0 - (radius_star_secondary*radius_star_secondary/ (apparent_R_S1*apparent_R_S1));            
+                phi_S1        = 0.0;
+                phi_S2        = 0.0;
+            }
+            else
+            {
+                gamma_S1      = abs(mean_anomaly- alpha_S1);
+                if (gamma_S1 > M_PI)
+                {
+                    gamma_S1  = M_PI - (gamma_S1 - M_PI);
+                }                
+                gamma_S2 = abs(M_PI-gamma_S1);
+                a_p1          = pow(a_pc**2 + a_S1**2 - 2*a_pc*a_S1*cos(gamma_S1),0.5);
+                a_p2          = pow(a_pc**2 + a_S2**2 - 2*a_pc*a_S2*cos(gamma_S2),0.5);
+                phi_S1        = asin(a_S1*sin(gamma_S1)/a_p1);
+                phi_S2        = asin(a_S2*sin(gamma_S1)/a_p2);
+                
+            
+
+                //#######################
+                
+                if (a_p1 == a_p2)
+                {
+                    D_critical           = a_S1 + a_S2;
+                    apparent_R_S1        = radius_star_primary;
+                    apparent_R_S2        = radius_star_secondary;
+                }
+                else if (a_p1 < a_p2)
+                {
+                    D_critical           = pow(2*a_p1*a_p1 - 2*a_p1*a_p1*cos(phi_S1 + phi_S2), 0.5);
+                    apparent_R_S1        = radius_star_primary;
+                    apparent_R_S2        = radius_star_secondary*a_p1/a_p2;
+                }
+                else
+                {            
+                    D_critical           = pow(2*a_p2*a_p2 - 2*a_p2*a_p2*cos(phi_S1 + phi_S2), 0.5);
+                    apparent_R_S1        = radius_star_primary*a_p2/a_p1;
+                    apparent_R_S2        = radius_star_secondary;
+                }
+
+                //#######################
+
+                if (D_critical >= (apparent_R_S1 + apparent_radius_star_secondary) ) 
+                {   //# no shadow
+                    A_intersection = 0.0;
+                    d1             = 0.0;
+                    d2             = 0.0;
+                    shadow_F1      = 1.0;
+                    shadow_F2      = 1.0;
+                }
+                else if (D_critical <= (apparent_R_S1 - apparent_R_S2 )) 
+                {  // # totally inside
+                    A_intersection = 0.0;
+                    d1             = 0.0;
+                    d2             = 0.0;
+
+                    if (a_p1 < a_p2)
+                    {
+                        shadow_F1  = 1.0;
+                        shadow_F2  = 0.0;
+                    }
+                    else 
+                    {
+                        shadow_F1  = 1.0 - (apparent_R_S2*apparent_R_S2 / (apparent_R_S1*apparent_R_S1));
+                        shadow_F2  = 1.0;
+                    }
+
+                }
+                else 
+                {                                             //#partially shadow
+                    d1             = (apparent_R_S1*apparent_R_S1 - apparent_R_S2*apparent_R_S2 + D_critical*D_critical) /(2* D_critical);
+                    d2             = D_critical - d1; 
+                    
+                    A_intersection =   apparent_R_S1*apparent_R_S1 * acos(d1/apparent_R_S1) 
+                                            - d1*pow(apparent_R_S1*apparent_R_S1 - d1*d1, 0.5) 
+                                            + apparent_R_S2*apparent_R_S2 * acos(d2/apparent_R_S2)
+                                            - d2*pow(apparent_R_S2*apparent_R_S2 - d2*d2, 0.5);
+                    if (a_p1 < a_p2)
+                    {
+                        shadow_F1  =  1.0;              
+                        shadow_F2  =  1.0   - A_intersection / (M_PI*apparent_R_S2*apparent_R_S2);
+                    }
+                    else
+                    {
+                        shadow_F1  =  1.0   - A_intersection / (M_PI*apparent_R_S1*apparent_R_S1);         
+                        shadow_F2  =  1.0;
+                    }
+                }
+
+                
+                if ((mean_anomaly - alpha_S1) > 0.0)
+                {                
+                    phi_S1        = -phi_S1;
+                    phi_S2        = phi_S2;
+                }
+                else
+                {                
+                    phi_S1        = phi_S1;
+                    phi_S2        = -phi_S2;
+                }
             }
 
 
-            
+                
             incflx_final_S1    = shadow_F1 * SIGMA_SB_th * pow(Tstar_primary  , 4.0) * pow(radius_star_primary   / a_p1, 2.0);
             incflx_final_S2    = shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / a_p2, 2.0);
+            
 
-            if (moon_irr_mode){                
+            if (moon_irr_mode)
+            {                
                 incflx_IR          = ( shadow_F1 * SIGMA_SB_th * pow(Tstar_primary  , 4.0) * pow(radius_star_primary   / (2.0 * a_p1), 2.0)
-                                     + shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / (2.0 * a_p2), 2.0)
+                                      + shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / (2.0 * a_p2), 2.0)
                                      ) * pow((radius_host) / (moon_host_D*r_orb), 2.0);
-                
+                    
                 incflx_reflection  = ( shadow_F1 * SIGMA_SB_th * pow(Tstar_primary  , 4.0) * pow(radius_star_primary   / (a_p1 + moon_host_D*r_orb), 2.0)
-                                     + shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / (a_p2 + moon_host_D*r_orb), 2.0)
+                                       + shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / (a_p2 + moon_host_D*r_orb), 2.0)
                                      );
             }
-            
-            
-            
+                
+                
+                
 
+
+            
 
         }
-
-    }
 
         
 
