@@ -26,7 +26,7 @@ log_n_out = 15 #90
 
 # output directory (relative to current working directory)
 # defaults to 'results'
-results_path = Kepler1661slowerbetter
+results_path = Kepler1661binary
 
 # output global diagnostics (energy, mass, momentum, entropy)
 globdiag = true
@@ -247,7 +247,7 @@ table_num_parmentier = 2
 
 #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Mode for binary star system
-binary_star_mode = false
+binary_star_mode = true
 
 # stellar temperature (k) of secondary star
 Tstar_secondary = 3585
