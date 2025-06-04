@@ -465,7 +465,7 @@ void Insolation::print_config() {
     log::printf("    Distance between moon and host planet    = %f \n", moon_host_D_config);
     log::printf("    Radius of the host planet                = %f \n", radius_host_config);    
     log::printf("    Orbital mean motion of the host          = %f rad/s.\n", mean_motion_host_config);
-    if (sim.binary_star_mode) {
+    if (binary_star_mode_config) {
         log::printf("    Stellar temperature of primary star                             = %f K \n", Tstar_primary_config);
         log::printf("    Radius of host star (R_sun) of the primary star                 = %f K \n", radius_star_primary_config);
         log::printf("    Stellar temperature of secondary star                           = %f K \n", Tstar_secondary_config);
@@ -979,8 +979,8 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                     gamma_S1  = M_PI - (gamma_S1 - M_PI);
                 }                
                 gamma_S2 = abs(M_PI-gamma_S1);
-                a_p1          = pow(a_pc**2 + a_S1**2 - 2*a_pc*a_S1*cos(gamma_S1),0.5);
-                a_p2          = pow(a_pc**2 + a_S2**2 - 2*a_pc*a_S2*cos(gamma_S2),0.5);
+                a_p1          = pow(a_pc*a_pc* + a_S1**2 - 2*a_pc*a_S1*cos(gamma_S1),0.5);
+                a_p2          = pow(a_pc*a_pc* + a_S2**2 - 2*a_pc*a_S2*cos(gamma_S2),0.5);
                 phi_S1        = asin(a_S1*sin(gamma_S1)/a_p1);
                 phi_S2        = asin(a_S2*sin(gamma_S1)/a_p2);
                 
@@ -1009,7 +1009,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
                 //#######################
 
-                if (D_critical >= (apparent_R_S1 + apparent_radius_star_secondary) ) 
+                if (D_critical >= (apparent_R_S1 + apparent_R_S2) ) 
                 {   //# no shadow
                     A_intersection = 0.0;
                     d1             = 0.0;

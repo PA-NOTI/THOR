@@ -751,12 +751,13 @@ __device__ void radcsw_binary(double *phtemp,
     // double gocp;
     //double tau      = (tausw / ps0) * (phtemp[id * (nv + 1) + nv]);
     double tau;
-    double insol_d_moon;
+    double insol_d_moon, insol_d_S1, insol_d_S2;
     double flux_top_moon;
     insol_d_moon  = 0.0;
+    insol_d_S1    = 0.0;
     insol_d_S2    = 0.0;
     flux_top_moon = 0.0;
-    if (coszrs != 0.0 || coszrs_moon != 0.0  || coszrs_S2 > 0.0)
+    if (coszrs >  0.0 || coszrs_moon > 0.0  || coszrs_S2 > 0.0)
     {
         if (GravHeightVar) {
             tau = (kappa_sw / (gravit * pow(A / (A + Altitudeh_d[nv + 1]), 2)))
@@ -774,13 +775,15 @@ __device__ void radcsw_binary(double *phtemp,
             if (moon_irr_config){
                 //insol_d[id]     = incflx      * pow(r_orb_host, -2) * coszrs;
                 //insol_d_moon    = incflx_moon * pow(r_orb_host, -2) * coszrs_moon;                
-                insol_d[id]     = incflx         *  coszrs;
+                insol_d[id]     = incflx         *  coszrs + incflx_S2      *  coszrs_S2;
                 insol_d_moon    = incflx_moon    *  coszrs_moon;
+                insol_d_S1      = incflx         *  coszrs;
                 insol_d_S2      = incflx_S2      *  coszrs_S2;
             }
             else {
                 //insol_d[id]     = incflx * pow(r_orb, -2) * coszrs;
-                insol_d[id]     = incflx         *  coszrs;
+                insol_d[id]     = incflx         *  coszrs + incflx_S2      *  coszrs_S2;
+                insol_d_S1      = incflx         *  coszrs;
                 insol_d_S2      = incflx_S2      *  coszrs_S2;
             }
         }
@@ -788,7 +791,7 @@ __device__ void radcsw_binary(double *phtemp,
         
         
         
-        double flux_top    = insol_d[id] * (1.0 - alb);
+        double flux_top    = insol_d_S1  * (1.0 - alb);
         double flux_top_S2 = insol_d_S2  * (1.0 - alb);   
         double rup, rlow;
 
@@ -796,15 +799,16 @@ __device__ void radcsw_binary(double *phtemp,
             flux_top_moon = insol_d_moon * (albedo_host) * (1.0 - alb);
             // Extra layer to avoid over heating at the top.
             //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection * moon_distance_F);
-            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)   
-                                         +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection)
-                                         +     flux_top_S2 *   exp(-(1.0 / coszrs_S2) * tau)  ;
+            fsw_dn_d[id * (nv + 1) + nv]  =  flux_top      * exp(-(1.0 / coszrs)      * tau)   
+                                          +  flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection)
+                                          +  flux_top_S2   * exp(-(1.0 / coszrs_S2)   * tau)  ;
             //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau) ;
             //fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau)     +     flux_top_moon * exp(-(1.0 / coszrs_moon) * tau * Fraction_reflection);
         } else
         {
             // Extra layer to avoid over heating at the top.
-            fsw_dn_d[id * (nv + 1) + nv] = flux_top * exp(-(1.0 / coszrs) * tau);
+            fsw_dn_d[id * (nv + 1) + nv] =  flux_top      * exp(-(1.0 / coszrs)    * tau) 
+                                         +  flux_top_S2   * exp(-(1.0 / coszrs_S2) * tau)  ;
         }
         
 
