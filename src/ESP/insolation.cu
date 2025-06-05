@@ -498,7 +498,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
         alpha_i               = alpha_i_config * M_PI / 180.0;
         obliquity             = obliquity_config * M_PI / 180.0;
 
-        if (sim.binary_star_mode) {              
+        if (sim.moon_irr_mode) {              
             moon_irr              = moon_irr_config;           // simulated moon irradiated by host planet
             moon_host_D           = moon_host_D_config;        // distance between moon and host planet
             radius_host           = radius_host_config;        // radius of the host planet        
