@@ -426,19 +426,17 @@ bool Insolation::initialise_memory(const ESP&               esp,
         cos_zenith_angles.allocate(esp.point_num);
         cos_zenith_angles.zero();
         
-        if (esp.moon_irr_mode)
-        {
+        
         cos_zenith_angles_moon.allocate(esp.point_num);
         cos_zenith_angles_moon.zero();
-        }
+        
 
-        if (esp.binary_star_mode)
-        {
-            cos_zenith_angles_S1.allocate(esp.point_num);
-            cos_zenith_angles_S1.zero();
-            cos_zenith_angles_S2.allocate(esp.point_num);
-            cos_zenith_angles_S2.zero();
-        }
+        
+        cos_zenith_angles_S1.allocate(esp.point_num);
+        cos_zenith_angles_S1.zero();
+        cos_zenith_angles_S2.allocate(esp.point_num);
+        cos_zenith_angles_S2.zero();
+        
 
         USE_BENCHMARK();
 
