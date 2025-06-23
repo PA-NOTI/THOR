@@ -829,6 +829,8 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     const double pi       = atan((double)(1)) * 4;
     double  moon_orbit_F;
 
+    bool do_only_once = true;
+
     /*
     if (moon_irr_mode) {
         mean_anomaly = fmod((  ((mean_motion)) * time + mean_anomaly_i), (2 * M_PI)); 
@@ -1104,6 +1106,132 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                                        + shadow_F2 * SIGMA_SB_th * pow(Tstar_secondary, 4.0) * pow(radius_star_secondary / (a_p2 + moon_host_D*r_orb), 2.0)
                                      );
             }
+
+            if (do_only_once)
+            {
+                if (isnan(incflx_final_S1))
+                {
+                    log::printf("    incflx_final_S1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(incflx_final_S2))
+                {
+                    log::printf("    incflx_final_S2 in insolation.cu is NaN  \n");
+                }
+                if (isnan(incflx_IR))
+                {
+                    log::printf("    incflx_IR in insolation.cu is NaN  \n");
+                }
+                if (isnan(incflx_reflection))
+                {
+                    log::printf("    incflx_reflection in insolation.cu is NaN  \n");
+                }
+                if (isnan(shadow_F1))
+                {
+                    log::printf("    shadow_F1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(shadow_F2))
+                {
+                    log::printf("    shadow_F2 in insolation.cu is NaN  \n");
+                }
+                if (isnan(SIGMA_SB_th))
+                {
+                    log::printf("    SIGMA_SB_th in insolation.cu is NaN  \n");
+                }
+                if (isnan(Tstar_primary))
+                {
+                    log::printf("    Tstar_primary in insolation.cu is NaN  \n");
+                }
+                if (isnan(Tstar_secondary))
+                {
+                    log::printf("    Tstar_secondary in insolation.cu is NaN  \n");
+                }
+                if (isnan(radius_star_primary))
+                {
+                    log::printf("    radius_star_primary in insolation.cu is NaN  \n");
+                }
+                if (isnan(radius_star_secondary))
+                {
+                    log::printf("    radius_star_secondary in insolation.cu is NaN  \n");
+                }
+                if (isnan(a_p1))
+                {
+                    log::printf("    a_p1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(a_p2))
+                {
+                    log::printf("    a_p2 in insolation.cu is NaN  \n");
+                }
+                if (isnan(moon_host_D))
+                {
+                    log::printf("    moon_host_D in insolation.cu is NaN  \n");
+                }
+                if (isnan(r_orb))
+                {
+                    log::printf("    r_orb in insolation.cu is NaN  \n");
+                }
+                if (isnan(A_intersection))
+                {
+                    log::printf("    A_intersection in insolation.cu is NaN  \n");
+                }
+                if (isnan(apparent_R_S1))
+                {
+                    log::printf("    apparent_R_S1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(apparent_R_S2))
+                {
+                    log::printf("    apparent_R_S2 in insolation.cu is NaN  \n");
+                }
+                if (isnan(d1))
+                {
+                    log::printf("    d1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(d2))
+                {
+                    log::printf("    d2 in insolation.cu is NaN  \n");
+                }
+                if (isnan(D_critical))
+                {
+                    log::printf("    D_critical in insolation.cu is NaN  \n");
+                }
+                if (isnan(a_S1))
+                {
+                    log::printf("    a_S1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(a_S2))
+                {
+                    log::printf("    a_S2 in insolation.cu is NaN  \n");
+                }
+                if (isnan(gamma_S1))
+                {
+                    log::printf("    gamma_S1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(gamma_S2))
+                {
+                    log::printf("    gamma_S2 in insolation.cu is NaN  \n");
+                }
+                if (isnan(a_pc))
+                {
+                    log::printf("    a_pc in insolation.cu is NaN  \n");
+                }
+                if (isnan(alpha_S1))
+                {
+                    log::printf("    alpha_S1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(alpha_S2))
+                {
+                    log::printf("    alpha_S2 in insolation.cu is NaN  \n");
+                }
+                if (isnan(alpha_day))
+                {
+                    log::printf("    alpha_day in insolation.cu is NaN  \n");
+                }
+
+
+                
+
+                do_only_once = false;
+            }
+            
                 
                 
                 

@@ -947,8 +947,9 @@ bool radiative_transfer::phy_loop(ESP &                  esp,
                 log::printf("   Tirr_lw_from_Host                          = %f K.\n",Thost_night);
                 log::printf("   F_fromHost                                 = %f W/m^2.\n",F_fromHost);
                 log::printf("   incflx (flux direct from the star)         = %f W/m^2.\n",incflx);
-                log::printf("   incflx_final (direct)                      = %f W/m^2.\n",incflx_final);
-                log::printf("   incflx_moon (sw refelction)                = %f W/m^2.\n",incflx_final);
+                log::printf("   incflx_final S1 (direct)                   = %f W/m^2.\n",incflx_final);
+                log::printf("   incflx_final S2 (direct)                   = %f W/m^2.\n",incflx_final_S2);
+                log::printf("   incflx_moon (sw refelction)                = %f W/m^2.\n",incflx_moon);
                 log::printf("   moon_host_D                                = %f m \n",moon_host_D);
                 log::printf("   radius_host                                = %f W/m^2.\n",radius_host);
                 log::printf("   esp.insolation.get_r_orb()                 = %f \n", esp.insolation.get_r_orb());
