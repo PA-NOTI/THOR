@@ -1002,8 +1002,8 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                     gamma_S1  = M_PI - (gamma_S1 - M_PI);
                 }                
                 gamma_S2 = abs(M_PI-gamma_S1);
-                a_p1          = pow(a_pc*a_pc* + a_S1*a_S1 - 2*a_pc*a_S1*cos(gamma_S1),0.5);
-                a_p2          = pow(a_pc*a_pc* + a_S2*a_S2 - 2*a_pc*a_S2*cos(gamma_S2),0.5);
+                a_p1          = pow(a_pc*a_pc + a_S1*a_S1 - 2*a_pc*a_S1*cos(gamma_S1),0.5);
+                a_p2          = pow(a_pc*a_pc + a_S2*a_S2 - 2*a_pc*a_S2*cos(gamma_S2),0.5);
                 phi_S1        = asin(a_S1*sin(gamma_S1)/a_p1);
                 phi_S2        = asin(a_S2*sin(gamma_S1)/a_p2);
                 
