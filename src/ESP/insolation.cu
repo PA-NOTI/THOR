@@ -1109,7 +1109,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
             if (do_only_once)
             {
-                if (sim.moon_irr_mode) {
+                if (moon_irr_mode) {
                     
                     log::printf("   moon_irr                                      = %f K.\n",moon_irr);
                     
@@ -1120,7 +1120,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                     log::printf("   ecc_host                                      = %f K.\n",ecc_host);
                 }
 
-                if (sim.binary_star_mode) {
+                if (binary_star_mode) {
                     
                     log::printf("   Tstar_primary                                      = %f K.\n",Tstar_primary);
                     
