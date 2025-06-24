@@ -403,17 +403,17 @@ bool Insolation::configure(config_file& config_reader) {
     config_reader.append_config_var("ecc_host", ecc_host_config, ecc_host_config);    
 
     config_reader.append_config_var("binary_star_mode", binary_star_mode_config, binary_star_mode_config);    
-    if (binary_star_mode_config) {
-        config_reader.append_config_var("Tstar", Tstar_primary_config, Tstar_primary_config);
-        config_reader.append_config_var("radius_star", radius_star_primary_config, radius_star_primary_config);
-        config_reader.append_config_var("Tstar_secondary_config", Tstar_secondary_config, Tstar_secondary_config);
-        config_reader.append_config_var("radius_star_secondary_config", radius_star_secondary_config, radius_star_secondary_config);
-        config_reader.append_config_var("a_secondary_config", a_secondary_config, a_secondary_config);    
-        config_reader.append_config_var("a_primary_config", a_primary_config, a_primary_config);    
-        config_reader.append_config_var("binary_perdiod_config", binary_perdiod_config, binary_perdiod_config);    
-        config_reader.append_config_var("M_S1", M_S1_config, M_S1_config);    
-        config_reader.append_config_var("M_S2", M_S2_config, M_S2_config);
-    }
+    
+    config_reader.append_config_var("Tstar", Tstar_primary_config, Tstar_primary_config);
+    config_reader.append_config_var("radius_star", radius_star_primary_config, radius_star_primary_config);
+    config_reader.append_config_var("Tstar_secondary_config", Tstar_secondary_config, Tstar_secondary_config);
+    config_reader.append_config_var("radius_star_secondary_config", radius_star_secondary_config, radius_star_secondary_config);
+    config_reader.append_config_var("a_secondary_config", a_secondary_config, a_secondary_config);    
+    config_reader.append_config_var("a_primary_config", a_primary_config, a_primary_config);    
+    config_reader.append_config_var("binary_perdiod_config", binary_perdiod_config, binary_perdiod_config);    
+    config_reader.append_config_var("M_S1", M_S1_config, M_S1_config);    
+    config_reader.append_config_var("M_S2", M_S2_config, M_S2_config);
+    
 
 
     config_reader.append_config_var("insol_avg", insol_avg_str, string(insol_avg_default));
@@ -1113,38 +1113,38 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                     
                     log::printf("   moon_irr                                      = %f K.\n",moon_irr);
                     
-                    log::printf("   moon_host_D                                      = %f K.\n",moon_host_D);
+                    log::printf("   moon_host_D                                   = %f K.\n",moon_host_D);
                     
-                    log::printf("   radius_host                                      = %f K.\n",radius_host);
+                    log::printf("   radius_host                                   = %f K.\n",radius_host);
                     
                     log::printf("   ecc_host                                      = %f K.\n",ecc_host);
                 }
 
                 if (binary_star_mode) {
                     
-                    log::printf("   Tstar_primary                                      = %f K.\n",Tstar_primary);
+                    log::printf("   Tstar_primary                              = %f K.\n",Tstar_primary);
                     
-                    log::printf("   radius_star_primary                                      = %f K.\n",radius_star_primary);
+                    log::printf("   radius_star_primary                        = %f K.\n",radius_star_primary);
                     
-                    log::printf("   Tstar_secondary                                      = %f K.\n",Tstar_secondary);
+                    log::printf("   Tstar_secondary                            = %f K.\n",Tstar_secondary);
                     
-                    log::printf("   radius_star_secondary                                      = %f K.\n",radius_star_secondary);
+                    log::printf("   radius_star_secondary                      = %f K.\n",radius_star_secondary);
                     
-                    log::printf("   a_S2                                      = %f K.\n",a_S2);
+                    log::printf("   a_S2                                       = %f K.\n",a_S2);
                     
-                    log::printf("   binary_perdiod                                      = %f K.\n",binary_perdiod);
+                    log::printf("   binary_perdiod                             = %f K.\n",binary_perdiod);
                     
-                    log::printf("   M_S1                                      = %f K.\n",M_S1);
+                    log::printf("   M_S1                                       = %f K.\n",M_S1);
                     
-                    log::printf("   M_S2                                      = %f K.\n",M_S2);
+                    log::printf("   M_S2                                       = %f K.\n",M_S2);
                     
-                    log::printf("   R_SUN_th                                      = %f K.\n",R_SUN_th);
+                    log::printf("   R_SUN_th                                   = %f K.\n",R_SUN_th);
                     
                     log::printf("   AU_th                                      = %f K.\n",AU_th);
                     
-                    log::printf("   apparent_R_S1                                      = %f K.\n",apparent_R_S1);
+                    log::printf("   apparent_R_S1                              = %f K.\n",apparent_R_S1);
                     
-                    log::printf("   apparent_R_S2                                      = %f K.\n",apparent_R_S2);            
+                    log::printf("   apparent_R_S2                              = %f K.\n",apparent_R_S2);            
             
                 }
 
