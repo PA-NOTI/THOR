@@ -278,7 +278,6 @@ private:
     double incflx_reflection            = 0.0;
 
     bool print_once            = true;
-    bool do_only_once          = true;
     
     double table_num_parmentier_config = 2; // if picket-fence, table number used to compute gamma (with/without Tio)
 

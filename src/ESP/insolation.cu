@@ -828,7 +828,8 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     double ecc_anomaly, true_long, ecc_anomaly_host, pol_2_moon, phi_min, eclipse_phi;
     const double pi       = atan((double)(1)) * 4;
     double  moon_orbit_F;
-
+    
+    bool do_only_once          = true;
     
 
     /*
