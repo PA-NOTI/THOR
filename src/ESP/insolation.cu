@@ -1109,6 +1109,49 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
             if (do_only_once)
             {
+                if (sim.moon_irr_mode) {
+                    
+                    log::printf("   moon_irr                                      = %f K.\n",moon_irr);
+                    
+                    log::printf("   moon_host_D                                      = %f K.\n",moon_host_D);
+                    
+                    log::printf("   radius_host                                      = %f K.\n",radius_host);
+                    
+                    log::printf("   ecc_host                                      = %f K.\n",ecc_host);
+                }
+
+                if (sim.binary_star_mode) {
+                    
+                    log::printf("   Tstar_primary                                      = %f K.\n",Tstar_primary);
+                    
+                    log::printf("   radius_star_primary                                      = %f K.\n",radius_star_primary);
+                    
+                    log::printf("   Tstar_secondary                                      = %f K.\n",Tstar_secondary);
+                    
+                    log::printf("   radius_star_secondary                                      = %f K.\n",radius_star_secondary);
+                    
+                    log::printf("   a_S2                                      = %f K.\n",a_S2);
+                    
+                    log::printf("   binary_perdiod                                      = %f K.\n",binary_perdiod);
+                    
+                    log::printf("   M_S1                                      = %f K.\n",M_S1);
+                    
+                    log::printf("   M_S2                                      = %f K.\n",M_S2);
+                    
+                    log::printf("   R_SUN_th                                      = %f K.\n",R_SUN_th);
+                    
+                    log::printf("   AU_th                                      = %f K.\n",AU_th);
+                    
+                    log::printf("   apparent_R_S1                                      = %f K.\n",apparent_R_S1);
+                    
+                    log::printf("   apparent_R_S2                                      = %f K.\n",apparent_R_S2);            
+            
+                }
+
+
+
+
+
                 if (isnan(incflx_final_S1))
                 {
                     log::printf("    incflx_final_S1 in insolation.cu is NaN  \n");
