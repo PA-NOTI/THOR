@@ -406,11 +406,11 @@ bool Insolation::configure(config_file& config_reader) {
     
     config_reader.append_config_var("Tstar", Tstar_primary_config, Tstar_primary_config);
     config_reader.append_config_var("radius_star", radius_star_primary_config, radius_star_primary_config);
-    config_reader.append_config_var("Tstar_secondary_config", Tstar_secondary_config, Tstar_secondary_config);
-    config_reader.append_config_var("radius_star_secondary_config", radius_star_secondary_config, radius_star_secondary_config);
-    config_reader.append_config_var("a_secondary_config", a_secondary_config, a_secondary_config);    
-    config_reader.append_config_var("a_primary_config", a_primary_config, a_primary_config);    
-    config_reader.append_config_var("binary_perdiod_config", binary_perdiod_config, binary_perdiod_config);    
+    config_reader.append_config_var("Tstar_secondary", Tstar_secondary_config, Tstar_secondary_config);
+    config_reader.append_config_var("radius_star_secondary", radius_star_secondary_config, radius_star_secondary_config);
+    config_reader.append_config_var("a_secondary", a_secondary_config, a_secondary_config);    
+    config_reader.append_config_var("a_primary", a_primary_config, a_primary_config);    
+    config_reader.append_config_var("binary_perdiod", binary_perdiod_config, binary_perdiod_config);    
     config_reader.append_config_var("M_S1", M_S1_config, M_S1_config);    
     config_reader.append_config_var("M_S2", M_S2_config, M_S2_config);
     
