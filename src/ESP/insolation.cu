@@ -828,9 +828,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     double ecc_anomaly, true_long, ecc_anomaly_host, pol_2_moon, phi_min, eclipse_phi;
     const double pi       = atan((double)(1)) * 4;
     double  moon_orbit_F;
-    
-    bool do_only_once          = true;
-    
+
 
     /*
     if (moon_irr_mode) {
@@ -925,9 +923,12 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
             }
             
         }
+    }
 
-        if (binary_star_mode) {
-            
+        
+    if (binary_star_mode) {
+        if (1==1)
+        { 
             if (moon_irr_mode)
             {
                 mean_anomaly = fmod((mean_anomaly - alpha_moon_C), (2 * M_PI));
@@ -1108,6 +1109,8 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                                      );
             }
 
+        
+
             if (do_only_once)
             {
                 if (moon_irr_mode) {
@@ -1278,11 +1281,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                 if (isnan(M_S2))
                 {
                     log::printf("    M_S2 in insolation.cu is NaN  \n");
-                }
-
-
-                
-
+                } 
                 do_only_once = false;
             }
 
@@ -1351,7 +1350,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                 }
             }
 
-           
+        }
 
 
 
@@ -1375,7 +1374,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
             
 
-        }
+        
 
         
 
