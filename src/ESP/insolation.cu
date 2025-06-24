@@ -1115,7 +1115,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
             {
                 if (moon_irr_mode) {
                     
-                    log::printf("   moon_irr                                   = %s \n",moon_irr);
+                    //log::printf("   moon_irr                                   = %s \n",moon_irr);
                     
                     log::printf("   moon_host_D                                = %f m.\n",moon_host_D);
                     
