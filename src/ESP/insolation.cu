@@ -829,7 +829,7 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
     const double pi       = atan((double)(1)) * 4;
     double  moon_orbit_F;
 
-    bool do_only_once = true;
+    
 
     /*
     if (moon_irr_mode) {
@@ -1111,40 +1111,42 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
             {
                 if (moon_irr_mode) {
                     
-                    log::printf("   moon_irr                                      = %f K.\n",moon_irr);
+                    log::printf("   moon_irr                                   = %s \n",moon_irr);
                     
-                    log::printf("   moon_host_D                                   = %f K.\n",moon_host_D);
+                    log::printf("   moon_host_D                                = %f m.\n",moon_host_D);
                     
-                    log::printf("   radius_host                                   = %f K.\n",radius_host);
+                    log::printf("   radius_host                                = %f m.\n",radius_host);
                     
-                    log::printf("   ecc_host                                      = %f K.\n",ecc_host);
+                    log::printf("   ecc_host                                   = %f .\n",ecc_host);
                 }
 
                 if (binary_star_mode) {
                     
                     log::printf("   Tstar_primary                              = %f K.\n",Tstar_primary);
                     
-                    log::printf("   radius_star_primary                        = %f K.\n",radius_star_primary);
+                    log::printf("   radius_star_primary                        = %f m.\n",radius_star_primary);
                     
                     log::printf("   Tstar_secondary                            = %f K.\n",Tstar_secondary);
                     
-                    log::printf("   radius_star_secondary                      = %f K.\n",radius_star_secondary);
+                    log::printf("   radius_star_secondary                      = %f m.\n",radius_star_secondary);
                     
-                    log::printf("   a_S2                                       = %f K.\n",a_S2);
+                    log::printf("   a_S1                                       = %f m.\n",a_S1);
                     
-                    log::printf("   binary_perdiod                             = %f K.\n",binary_perdiod);
+                    log::printf("   a_S2                                       = %f m.\n",a_S2);
                     
-                    log::printf("   M_S1                                       = %f K.\n",M_S1);
+                    log::printf("   binary_perdiod                             = %f days.\n",binary_perdiod);
                     
-                    log::printf("   M_S2                                       = %f K.\n",M_S2);
+                    log::printf("   M_S1                                       = %f [M_Sun].\n",M_S1);
                     
-                    log::printf("   R_SUN_th                                   = %f K.\n",R_SUN_th);
+                    log::printf("   M_S2                                       = %f [M_Sun].\n",M_S2);
                     
-                    log::printf("   AU_th                                      = %f K.\n",AU_th);
+                    log::printf("   R_SUN_th                                   = %f m.\n",R_SUN_th);
                     
-                    log::printf("   apparent_R_S1                              = %f K.\n",apparent_R_S1);
+                    log::printf("   AU_th                                      = %f m.\n",AU_th);
                     
-                    log::printf("   apparent_R_S2                              = %f K.\n",apparent_R_S2);            
+                    log::printf("   apparent_R_S1                              = %f m.\n",apparent_R_S1);
+                    
+                    log::printf("   apparent_R_S2                              = %f m.\n",apparent_R_S2);            
             
                 }
 
@@ -1282,10 +1284,92 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
 
                 do_only_once = false;
             }
+
+            if (1==1)
+            {
+                if (binary_star_mode) {
+                    
+                    log::printf("   a_S1                                       = %f m.\n",a_S1);
+                    
+                    log::printf("   a_S2                                       = %f m.\n",a_S2);
+                    
+                    log::printf("   apparent_R_S1                              = %f m.\n",apparent_R_S1);
+                    
+                    log::printf("   apparent_R_S2                              = %f m.\n",apparent_R_S2);  
+                    
+                    log::printf("   shadow_F1                                  = %f .\n",shadow_F1);
+                    
+                    log::printf("   shadow_F2                                  = %f .\n",shadow_F2);
+                    
+                    log::printf("   a_p1                                       = %f m.\n",a_p1);
+                    
+                    log::printf("   a_p2                                       = %f m.\n",a_p2); 
+                    
+                    log::printf("   a_pc                                       = %f m.\n",a_pc);  
+                    
+                    log::printf("   r_orb                                      = %f .\n",r_orb);   
+                    
+                    log::printf("   incflx_final_S1                            = %f Wm^-2.\n",incflx_final_S1);
+                    
+                    log::printf("   incflx_final_S2                            = %f Wm^-2.\n",incflx_final_S2);
+                    
+                    log::printf("   incflx_IR                                  = %f Wm^-2.\n",incflx_IR);  
+                    
+                    log::printf("   incflx_reflection                          = %f Wm^-2.\n",incflx_reflection);  
+                    
+                    log::printf("   d1                                         = %f m.\n",d1);   
+                    
+                    log::printf("   d2                                         = %f m.\n",d2);  
+                    
+                    log::printf("   D_critical                                 = %f m.\n",D_critical);    
+                    
+                    log::printf("   A_intersection                             = %f m.\n",A_intersection);    
+                    
+                    log::printf("   phi_S1                                     = %f .\n",phi_S1);       
+                    
+                    log::printf("   phi_S2                                     = %f .\n",phi_S2);     
+                    
+                    log::printf("   mean_anomaly                               = %f .\n",mean_anomaly);    
+                    
+                    log::printf("   alpha_S1                                   = %f .\n",alpha_S1);    
+                    
+                    log::printf("   alpha_S2                                   = %f .\n",alpha_S2);       
+                    
+                    log::printf("   alpha_day                                  = %f .\n",alpha_day);    
+                    
+                    log::printf("   moon_orbit_F                               = %f .\n",moon_orbit_F);       
+                    
+                    log::printf("   moon_orbit_F_rec                           = %f .\n",moon_orbit_F_rec);          
+                    
+                    log::printf("   alpha_moon_C                               = %f .\n",alpha_moon_C);     
+                    
+                    log::printf("   gamma_S1                                   = %f .\n",gamma_S1);    
+                    
+                    log::printf("   gamma_S2                                   = %f .\n",gamma_S2); 
             
-                
-                
-                
+                }
+            }
+
+           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
             
