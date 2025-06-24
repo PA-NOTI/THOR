@@ -527,7 +527,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             M_S1                         = M_S1_config;                                  // Mass of the primary star (M_Sun)            
             M_S2                         = M_S2_config;                                  // Mass of the primary star (M_Sun) 
 
-            a_S1 = a_S2 *M_S2/ M_S1;
+            a_S1 = a_S2 * M_S2 / M_S1;
             a_pc = esp.planet_star_dist;
             planet_star_dist = esp.planet_star_dist;
             
@@ -1224,6 +1224,14 @@ void Insolation::update_spin_orbit(double time, double Omega, bool moon_irr_mode
                 if (isnan(alpha_day))
                 {
                     log::printf("    alpha_day in insolation.cu is NaN  \n");
+                }
+                if (isnan(M_S1))
+                {
+                    log::printf("    M_S1 in insolation.cu is NaN  \n");
+                }
+                if (isnan(M_S2))
+                {
+                    log::printf("    M_S2 in insolation.cu is NaN  \n");
                 }
 
 
