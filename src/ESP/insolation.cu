@@ -530,6 +530,7 @@ bool Insolation::initial_conditions(const ESP& esp, const SimulationSetup& sim, 
             a_S1 = a_S2 * M_S2 / M_S1;
             a_pc = esp.planet_star_dist;
             planet_star_dist = esp.planet_star_dist;
+            omega_S1 =  (2.0 * M_PI) / binary_perdiod;
             
 
 
